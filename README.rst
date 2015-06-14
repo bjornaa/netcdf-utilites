@@ -27,3 +27,29 @@ The default --record=0 gives the first record
 Negative numbers count from the end, in particular
 --record=-1 gives the last record in the file
 
+float2int16.py - Convert float/double to short
+----------------------------------------------
+
+Convert selected float/double variables to short integers
+
+Usage:
+float2int16.py [-h] [-3] infile outfile
+
+Convert float/double to 16-bit integers
+
+positional arguments:
+  infile      Name of input netCDF file
+  outfile     Name of output file
+
+optional arguments:
+  -h, --help  show this help message and exit
+  -3          Create netCDF-3 format instead of default netCDF-4
+
+The script must be edited to modify the dictionary `scale_dictionary`
+to specify what variables to convert and their scale_factor and add_offset.
+The list `dont_copy` specifies variables that should
+not be copied/converted.
+
+By default, the output file is in netCDF-4 format, with internal
+zlib-compression.
+
