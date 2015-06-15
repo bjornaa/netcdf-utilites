@@ -17,6 +17,18 @@ difficult to parse manually. This utility does this job.
 
 Usage: ncdate.py [-h] [-r RECORD] [-t TIME_VARIABLE] file
 
+Display the time in a netCDF file
+
+positional arguments:
+  file                  Name of netCDF file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -r RECORD, --record RECORD
+                        record number, defaults to 0 i.e. first record
+  -t TIME_VARIABLE, --time-variable TIME_VARIABLE
+                        name of time variable
+
 
 If no time variable is specified, it will use 
 a unique time variable in the file (1D and with "since" in units)
