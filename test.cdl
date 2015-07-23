@@ -1,0 +1,21 @@
+netcdf test {
+
+dimensions:
+	time = unlimited ; // (10 currently)
+	X = 4 ;
+	
+variables:
+	int A(time, X) ;
+	        A:att1 = "ASCII text attribute" ;
+A:att2 = 3.14 ;
+		A:att3 = 42 ;
+		A:att4 = 1.1, 2, 0.5 ;
+		A:att5 = 1, 2 ;
+		A:att6 = 1.f, 2 ;
+		A:att7 = 1.2f, 1.3e18, 1.0e21 ;
+		A:att8 = 3s, 11 ;
+		A:att9 = "Bjørn Ådlandsvik" ;
+   	  :type = "Handwritten input for testing" ;
+}
+
+
