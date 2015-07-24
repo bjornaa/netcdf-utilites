@@ -1,7 +1,7 @@
 netcdf test {
 
 dimensions:
-	time = unlimited ; // (10 currently)
+	time = unlimited ; // (0 currently)
 	X = 4 ;
 	
 variables:
@@ -15,6 +15,7 @@ A:att2 = 3.14 ;
 		A:att7 = 1.2f, 1.3e18, 1.0e21 ;
 		A:att8 = 3s, 11 ;
 		A:att9 = "Bjørn Ådlandsvik" ;
+// Comment to separate global attributes
    	  :type = "Handwritten input for testing" ;
 }
 

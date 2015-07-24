@@ -158,22 +158,12 @@ class NCheader(_HasNCAttributes):
                 for att in var.ncattrs():
                     value = getattr(var, att)
                     v.set_attribute(att, value)
-                    #if isinstance(value, string_type):
-                    #    v.set_attribute(att, value)
-                    #else:
-                    #    value = np.atleast_1d(value)
-                    #    v.set_attribute(att, value, NCtype[value.dtype.char])
-                    #    #v.set_attribute(att, value)
 
             # Global attributes
             for att in fid.ncattrs():
                 value = getattr(fid, att)
                 nc.set_attribute(att, value)
-                #if isinstance(value, string_type):
-                #    nc.set_attribute(att, value, 'char')
-                #else:
-                #    value = np.atleast_1d(value)
-                #    nc.set_attribute(att, value, NCtype[value.dtype.char])
+
         return nc
 
     # ---
@@ -209,7 +199,9 @@ class NCheader(_HasNCAttributes):
         # Variables
         def isvarline(line):
             w = line.split()
-            return len(w) > 2 and w[2] != 'attributes:'
+            # Global attributes comes after comment line
+            # not ending with ";"
+            return w[-1][-1] == ';'
         variable_lines = it.takewhile(isvarline, lines)
         # Split the variables
         variable_chunks = isplit_noloss(lambda x: ':' in x.split()[0],
