@@ -6,6 +6,7 @@ dimensions:
 	
 variables:
 	int A(time, X) ;
+	    	A:_FillValue = -99 ;
 	        A:att1 = "ASCII text attribute" ;
 A:att2 = 3.14 ;
 		A:att3 = 42 ;

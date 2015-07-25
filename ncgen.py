@@ -50,9 +50,16 @@ def ncgen(nc, f):
         f.write("\n    # --- Variables\n")
     for name in nc.variables:
         var = nc.variables[name]
-        f.write("    v = ncid.createVariable('{}', '{}', {})\n".
-                format(name, fixtype[var.nctype], str(var.dimensions)))
-        for name in var.attributes:
+        attributes = var.attributes
+        if '_FillValue' in attributes:
+            f.write("    v = ncid.createVariable('{}', '{}', {}".
+                   format(name, fixtype[var.nctype], str(var.dimensions)))
+            f.write(", fill_value={})\n".format(attributes['_FillValue'].value[0]))
+            attributes.pop('_FillValue')
+        else:
+            f.write("    v = ncid.createVariable('{}', '{}', {}\n".
+                   format(name, fixtype[var.nctype], str(var.dimensions)))
+        for name in attributes:
             value = var.attributes[name].value
             if isinstance(value, basestring):
                 value = "'{}'".format(value)
@@ -86,5 +93,3 @@ if __name__ == '__main__':
 
     fid = sys.stdout
     ncgen(nc, fid)
-
-    fid.write('\nncid.close()\n')
