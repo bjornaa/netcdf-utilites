@@ -36,16 +36,16 @@ if PY2:
     string_type = basestring
 
 # Mapping from dtype.char or python type to NetCDF type
-NCtype = {float   : 'double',
-          int     : 'int',
-          str     : 'char',
-          'd'     : 'double',
-          'f'     : 'float',
-          'i'     : 'int',
-          'h'     : 'short',
-          'b'     : 'byte',
-          'S'     : 'char',
-          'U'     : 'char',
+NCtype = {float : 'double',
+          int   : 'int',
+          str   : 'char',
+          'd'   : 'double',
+          'f'   : 'float',
+          'i'   : 'int',
+          'h'   : 'short',
+          'b'   : 'byte',
+          'S'   : 'char',
+          'U'   : 'char',
           }
 
 # if PY2:
@@ -121,7 +121,7 @@ class Variable(_HasNCAttributes):
             return 0   # Scalar variables, shape = ()
 
 
-class NCheader(_HasNCAttributes):
+class NCstructure(_HasNCAttributes):
 
     def __init__(self, location=None):
         self.location = location
@@ -169,11 +169,11 @@ class NCheader(_HasNCAttributes):
     # ---
 
     @classmethod
-    def from_CDL(self, filename):
+    def from_CDL(cls, filename):
         """Define the data structure from a CDL file"""
         fid = codecs.open(filename, encoding='utf-8')
 
-        nc = NCheader()
+        nc = NCstructure()
 
         # Skip empty lines
         lines = (line for line in fid if line.split())
@@ -187,7 +187,6 @@ class NCheader(_HasNCAttributes):
         dimlines = it.takewhile(lambda x: x.split()[0] != 'variables:', lines)
         for line in dimlines:
             words = line.split()
-            #print words
             isunlimited = (words[2].upper() == 'UNLIMITED')
             if isunlimited:
                 # Get size from comment
@@ -220,7 +219,7 @@ class NCheader(_HasNCAttributes):
                 dims[-1] = dims[-1][:-1]    # remove trailing ')'
             else:
                 name = words[1]
-                ndim = 0
+                ndim= 0
                 dims = []
             # print name, nctype, tuple(dims)
             # Uelegant med de to linjene under, kombinere til en
@@ -328,7 +327,7 @@ class NCheader(_HasNCAttributes):
                 if isinstance(attvalue, string_type):
                     fid.write('    <attribute name="{}" value="{}" />\n'.
                               format(attname, attvalue))
-                else:  #NOTE: how to find type
+                else:
                     string = str(attvalue)
                     if string[-2:] == ".0":
                         string = string[:-1]
@@ -370,52 +369,50 @@ def parse_attribute(line):
         value = line[line.index('"')+1: line.rindex('"')]   # Between ""
     # short
     elif v0.endswith('s'):
-        #nctype = 'short'
+        # nctype = 'short'
         value = np.array([int(v.rstrip('s')) for v in values],
                          dtype='int16')
     # float
     elif v0.endswith('f'):
-        #nctype = 'float'
+        # nctype = 'float'
         value = np.array([float(v.rstrip('f')) for v in values],
                          dtype='float32')
     # double
     elif "." in v0:
-        #nctype = 'double'
+        # nctype = 'double'
         value = np.array([float(v) for v in values],
                          dtype='float64')
     # integer
     else:   # integer
-        #nctype = 'int'
+        # nctype = 'int'
         value = np.array([int(v) for v in values],
                          dtype='int32')
     # Make exception for bad entry
-    # print name, nctype, value
     return name, value
 
 
-def array2cdl(A):
+def array2cdl(vector):
     """Make a CDL string representation of a numeric 1D array."""
-    dtype = A.dtype
+    dtype = vector.dtype
 
-    def normalize(a):
+    def normalize(x):
         if dtype == 'int16':
-            s = '{}s'.format(a)
+            s = '{}s'.format(x)
         elif dtype == 'int32':
-            s = str(a)
+            s = str(x)
         elif dtype == 'float32':
-            s = str(a).rstrip('0')
+            s = str(x).rstrip('0')
             if '.' not in s:  # f.ex. s = 1e18
                 s = s.replace('e', '.e')
             s = '{}f'.format(s)
         elif dtype == 'float64':
-            s = str(a).rstrip('0')
+            s = str(x).rstrip('0')
             if '.' not in s:
                 s = s.replace('e', '.e')
         else:
             print('Unknown type')
-            print(a)
         return s  # end normalize
-    return ', '.join(normalize(a) for a in A)
+    return ', '.join(normalize(a) for a in vector)
 
 
 # ====================================
@@ -427,6 +424,6 @@ if __name__ == '__main__':
     #v = nc.variables['temp']
     #nc.write_CDL()
     #nc.write_NcML(sys.stdout)
-    nc = NCheader.from_CDL('test.cdl')
+    nc = NCstructure.from_CDL('test.cdl')
     #nc.write_CDL(sys.stdout)
     nc.write_NcML(sys.stdout)

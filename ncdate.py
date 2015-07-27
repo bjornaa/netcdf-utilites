@@ -122,7 +122,7 @@ else:  # Time variable specified with --time-variable option
     # Is it defined?
     try:
         tvar = fid.variables[timevar]
-    except(KeyError):
+    except KeyError:
         print("ERROR: Can not find variable {}".format(timevar))
         sys.exit(1)
     # Is it a time variable?

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import numpy as np
-from ncstructure import *  # Dårlig navn
+
+from ncstructure import *
 
 class TestParseAttribute(unittest.TestCase):
 
@@ -14,7 +14,7 @@ class TestParseAttribute(unittest.TestCase):
         self.assertEqual(value, 'ASCII text')
 
     def test_unicode(self):
-        """Handle strings correctly"""
+        """Handle unicode strings correctly"""
         line = u'var:author = "Bjørn Ådlandsvik" ;'
         name, value = parse_attribute(line)
         self.assertEqual(name, u'author')
@@ -56,10 +56,6 @@ class TestParseAttribute(unittest.TestCase):
         name, value = parse_attribute(line4)
         self.assertEqual(name, 'a')
         self.assertTrue(np.all(value == np.array([1., 2e16, -4.2e11])))
-
-
-
-
 
 if __name__ == '__main__':
     unittest.main()

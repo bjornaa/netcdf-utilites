@@ -32,7 +32,7 @@ import collections
 
 try:
     import numpy as np
-except(ImportError):
+except ImportError:
     print("ERROR: numpy is not installed")
     sys.exit(1)
 
@@ -111,7 +111,7 @@ all_vars = f0.variables.keys()
 for v in dont_copy:
     try:
         all_vars.remove(v)
-    except(ValueError):
+    except ValueError:
         pass  # Don't bark if variable v is missing already
 
 record_vars = [v for v in all_vars if unlim_dim in f0.variables[v].dimensions]

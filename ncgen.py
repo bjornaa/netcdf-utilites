@@ -4,14 +4,13 @@
 
 from __future__ import unicode_literals
 
-from netCDF4 import Dataset
-from ncstructure import NCheader
+from ncstructure import NCstructure
 
 # Translate netCDF types to netcdf4-python types
-fixtype = dict(short='i2', int='i', float='f', double='d', char='c')
+type_abbrev = dict(short='i2', int='i', float='f', double='d', char='c')
 
 
-def ncgen(nc, f):
+def ncgen(ncstruc, f):
     """Generate a script defining the netcdf structure"""
 
     # --- Header stuff
@@ -27,15 +26,15 @@ def ncgen(nc, f):
     f.write("def defineCDF():\n")
     f.write('    """Create/define a netCDF file with given structure"""\n')
     f.write("\n    # --- Create netCDF file\n")
-    f.write("    ncid = Dataset('{}.nc', mode='w', ".format(nc.location))
+    f.write("    ncid = Dataset('{}.nc', mode='w', ".format(ncstruc.location))
     f.write("format='NETCDF3_CLASSIC')\n")
 
     # --- Dimension
 
-    if len(nc.dimensions) > 0:
+    if len(ncstruc.dimensions) > 0:
         f.write("\n    # --- Dimensions\n")
-    for name in nc.dimensions:
-        dim = nc.dimensions[name]
+    for name in ncstruc.dimensions:
+        dim = ncstruc.dimensions[name]
         if dim.isunlimited():
             length = 'None'
         else:
@@ -46,33 +45,33 @@ def ncgen(nc, f):
 
     # --- Variables
 
-    if len(nc.variables) > 0:
+    if len(ncstruc.variables) > 0:
         f.write("\n    # --- Variables\n")
-    for name in nc.variables:
-        var = nc.variables[name]
+    for name in ncstruc.variables:
+        var = ncstruc.variables[name]
         attributes = var.attributes
         if '_FillValue' in attributes:
             f.write("    v = ncid.createVariable('{}', '{}', {}".
-                   format(name, fixtype[var.nctype], str(var.dimensions)))
+                    format(name, type_abbrev[var.nctype], str(var.dimensions)))
             f.write(", fill_value={})\n".format(attributes['_FillValue'].value[0]))
             attributes.pop('_FillValue')
         else:
             f.write("    v = ncid.createVariable('{}', '{}', {}\n".
-                   format(name, fixtype[var.nctype], str(var.dimensions)))
-        for name in attributes:
-            value = var.attributes[name].value
+                    format(name, type_abbrev[var.nctype], str(var.dimensions)))
+        for attname in attributes:
+            value = var.attributes[attname].value
             if isinstance(value, basestring):
                 value = "'{}'".format(value)
             else:
                 value = 'np.' + repr(value).replace('dtype=', 'dtype=np.')
-            f.write("    v.{} = {}\n".format(name, value))
+            f.write("    v.{} = {}\n".format(attname, value))
 
     # --- Global attributes
 
-    if len(nc.attributes) > 0:
+    if len(ncstruc.attributes) > 0:
         f.write("\n    # --- Global attributes\n")
-    for name in nc.attributes:
-        value = nc.attributes[name].value
+    for name in ncstruc.attributes:
+        value = ncstruc.attributes[name].value
         if isinstance(value, basestring):
             value = "'{}'".format(value)
         else:
@@ -86,10 +85,11 @@ def ncgen(nc, f):
     f.write("    ncid = defineCDF()\n")
     f.write("    ncid.close()\n")
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     import sys
-    nc = NCheader.from_CDL('test.cdl')
+
+    nc = NCstructure.from_CDL('test.cdl')
 
     fid = sys.stdout
     ncgen(nc, fid)
