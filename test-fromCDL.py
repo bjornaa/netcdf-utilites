@@ -4,8 +4,8 @@ import unittest
 
 from ncstructure import *
 
-class TestParseAttribute(unittest.TestCase):
 
+class TestParseAttribute(unittest.TestCase):
     def test_ASCII(self):
         """Handle strings correctly"""
         line = 'var:att = "ASCII text" ;'
@@ -45,18 +45,18 @@ class TestParseAttribute(unittest.TestCase):
         line4 = ':a = 1.0, 2e16, -4.2e11 ;'
         name, value = parse_attribute(line1)
         self.assertEqual(name, 'a')
-        self.assertTrue(np.all(value == np.array([1, 2, 3], dtype='int16')))
+        self.assertTrue(np.alltrue(value == np.array([1, 2, 3], dtype='int16')))
         name, value = parse_attribute(line2)
         self.assertEqual(name, 'a')
-        self.assertTrue(np.all(value == np.array([1, 2, 3], dtype='int32')))
+        self.assertTrue(np.alltrue(value == np.array([1, 2, 3], dtype='int32')))
         name, value = parse_attribute(line3)
         self.assertEqual(name, 'a')
-        self.assertTrue(np.all(value == np.array([1., 2e16, -4.2e11],
-                                                 dtype='float32')))
+        self.assertTrue(np.alltrue(value == np.array([1., 2e16, -4.2e11],
+                                                     dtype='float32')))
         name, value = parse_attribute(line4)
         self.assertEqual(name, 'a')
-        self.assertTrue(np.all(value == np.array([1., 2e16, -4.2e11])))
+        self.assertTrue(np.alltrue(value == np.array([1., 2e16, -4.2e11])))
+
 
 if __name__ == '__main__':
     unittest.main()
-        

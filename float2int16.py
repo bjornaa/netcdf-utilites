@@ -38,7 +38,7 @@ except ImportError:
 
 try:
     from netCDF4 import Dataset
-except:
+except ImportError:
     print("ERROR: netcdf4-python is not installed")
     sys.exit(1)
 

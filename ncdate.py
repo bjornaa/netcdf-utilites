@@ -44,7 +44,7 @@ from argparse import ArgumentParser
 
 try:
     from netCDF4 import Dataset, num2date
-except:
+except ImportError:
     print("ERROR: netcdf4-python is not installed")
     sys.exit(1)
 
@@ -137,7 +137,7 @@ tvar = fid.variables[timevar]
 
 try:
     time_value = tvar[args.record]
-except(IndexError):
+except IndexError:
     print("ERROR: Must have -{ntimes} <= record < {ntimes}".
           format(ntimes=len(tvar)))
     sys.exit(1)

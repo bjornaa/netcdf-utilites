@@ -19,6 +19,7 @@ import os
 from collections import OrderedDict
 import itertools as it
 import codecs
+from xml.etree import ElementTree
 
 import numpy as np
 from netCDF4 import Dataset
@@ -47,6 +48,9 @@ NCtype = {float: 'double',
           'S'  : 'char',
           'U'  : 'char',
           }
+
+# Conversion from nctype to numpy dtype
+dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 
 
 # if PY2:
@@ -134,8 +138,6 @@ class NCstructure(_HasNCAttributes):
     def add_variable(self, variable):
         self.variables.setdefault(variable.name, variable)
 
-    # ---
-
     @classmethod
     def from_file(cls, filename):
         """Extract the structure from a netCDF file"""
@@ -150,7 +152,8 @@ class NCstructure(_HasNCAttributes):
 
             for name, var in fid.variables.items():
                 # Slå sammen til createVariable
-                v = Variable(ncstructure=nc, name=name, nctype=NCtype[var.dtype.char],
+                v = Variable(ncstructure=nc, name=name,
+                             nctype=NCtype[var.dtype.char],
                              dimensions=var.dimensions)
                 nc.add_variable(v)
                 # Variable attributes
@@ -239,6 +242,65 @@ class NCstructure(_HasNCAttributes):
 
         return nc
 
+    @classmethod
+    def from_NcML(cls, filename):
+
+        # Parse the NcML file
+        with open(filename) as fid:
+            tree = ElementTree.parse(fid)
+
+        root = tree.getroot()
+
+        # Create the structure
+        nc = NCstructure()
+
+        nc.location = root.attrib['location']
+
+        # Get iterators for the toplevel things,
+        #     dimensions, global attributes and variables
+        main_groups = it.groupby(root, key=lambda s: s.tag.split('}')[1])
+
+        for key, group in main_groups:
+
+            # Dimensions
+            if key == 'dimension':
+                for node in group:
+                    isunlimited = 'isUnlimited' in node.attrib.keys()
+                    nc.add_dimension(Dimension(name=node.attrib['name'],
+                                               size=int(node.attrib['length']),
+                                               isunlimited=isunlimited))
+
+            # Global attributes
+            elif key == 'attribute':
+                for node in group:
+                    name = node.attrib['name']
+                    value = node.attrib['value']
+                    nctype = node.attrib.get('type', 'char')
+                    if nctype != 'char':
+                        value = np.array([dtype[nctype](v)
+                                          for v in value.split()])
+                    nc.set_attribute(name, value)
+
+            # Variables
+            elif key == 'variable':
+                for node in group:
+                    dimensions = tuple(node.attrib['shape'].split())
+                    var = Variable(ncstructure=nc,
+                                   name=node.attrib['name'],
+                                   nctype=node.attrib['type'],
+                                   dimensions=dimensions)
+                    nc.add_variable(var)
+                    for att in node:  # All children are netCDF attributes
+                        name = att.attrib['name']
+                        value = att.attrib['value']
+                        nctype = att.attrib.get('type', 'char')
+                        if nctype != 'char':
+                            value = np.array([dtype[nctype](v)
+                                              for v in value.split()])
+                        var.set_attribute(name, value)
+
+        return nc
+
     def write_CDL(self, fid):
         """Write Common Data Language
 
@@ -287,9 +349,6 @@ class NCstructure(_HasNCAttributes):
 
         fid.write('}\n')
 
-    # ---
-
-    # Må oppdateres, håndterer ikke type og array-attributter korrekt.
     def write_NcML(self, fid):
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<netcdf xmlns="http://www.unidata.ucar.edu/')
@@ -299,7 +358,6 @@ class NCstructure(_HasNCAttributes):
         if not location.endswith('.nc'):
             location += '.nc'
         fid.write(' location="{}">\n'.format(location))
-
 
         # Dimensions
         for name, dim in self.dimensions.items():
@@ -435,10 +493,3 @@ def vector2ncml(vector):
         return s  # end normalize
 
     return ' '.join(normalize(a) for a in vector)
-
-
-# ====================================
-
-if __name__ == '__main__':
-    nc = NCstructure.from_CDL('test.cdl')
-    nc.write_NcML(sys.stdout)
