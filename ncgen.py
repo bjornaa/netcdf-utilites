@@ -2,6 +2,12 @@
 
 """Make a python function defining a given netcdf structure"""
 
+# ---------------------------------
+# Bjørn Ådlandsvik <bjorn@imr.no>
+# Institute of Marine Research
+# ---------------------------------
+
+
 from __future__ import unicode_literals
 
 from ncstructure import NCstructure
@@ -29,7 +35,7 @@ def ncgen(ncstruc, f):
     f.write("    ncid = Dataset('{}.nc', mode='w', ".format(ncstruc.location))
     f.write("format='NETCDF3_CLASSIC')\n")
 
-    # --- Dimension
+    # --- Dimensions
 
     if len(ncstruc.dimensions) > 0:
         f.write("\n    # --- Dimensions\n")
@@ -41,8 +47,6 @@ def ncgen(ncstruc, f):
             length = len(dim)
         f.write("    ncid.createDimension('{}', {})\n".format(name, length))
 
-    # TODO:  Har ikke lagt inn håndtering av _FillValue
-
     # --- Variables
 
     if len(ncstruc.variables) > 0:
@@ -50,6 +54,7 @@ def ncgen(ncstruc, f):
     for name in ncstruc.variables:
         var = ncstruc.variables[name]
         attributes = var.attributes
+        # _FillValue attribute must be handled separately
         if '_FillValue' in attributes:
             f.write("    v = ncid.createVariable('{}', '{}', {}".
                     format(name, type_abbrev[var.nctype], str(var.dimensions)))
@@ -58,6 +63,7 @@ def ncgen(ncstruc, f):
         else:
             f.write("    v = ncid.createVariable('{}', '{}', {}\n".
                     format(name, type_abbrev[var.nctype], str(var.dimensions)))
+        # Variable attributes
         for attname in attributes:
             value = var.attributes[attname].value
             if isinstance(value, basestring):

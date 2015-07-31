@@ -83,7 +83,7 @@ except RuntimeError:
 
 
 # Check function for time variables
-# Criterium, 1D and "since" in units
+# Criterium: 1D and "since" in units
 def is_time_variable(name):
     """Check if a variables is a time variable"""
     answer = False

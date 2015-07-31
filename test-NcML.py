@@ -28,8 +28,8 @@ class TestNcML(unittest.TestCase):
 
     def tearDown(self):
         os.remove('test.nc')
-        os.remove('test.ncml')
-        os.remove('mytest.ncml')
+        #os.remove('test.ncml')
+        #os.remove('mytest.ncml')
 
 
 if __name__ == '__main__':

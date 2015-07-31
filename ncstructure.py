@@ -37,17 +37,20 @@ if PY2:
     string_type = basestring
 
 # Mapping from dtype.char or python type to NetCDF type
-NCtype = {float: 'double',
-          int  : 'int',
-          str  : 'char',
-          'd'  : 'double',
-          'f'  : 'float',
-          'i'  : 'int',
-          'h'  : 'short',
-          'b'  : 'byte',
-          'S'  : 'char',
-          'U'  : 'char',
-          }
+# NCtype = {float: 'double',
+#           int  : 'int',
+#           str  : 'char',
+#           'd'  : 'double',
+#           'f'  : 'float',
+#           'i'  : 'int',
+#           'h'  : 'short',
+#           'b'  : 'byte',
+#           'S'  : 'char',
+#           'U'  : 'char',
+#           }
+
+# Conversion from numpy dtype.char to NetCDF type
+NCtype = dict(h='short', i='int', f='float', d='double')
 
 # Conversion from nctype to numpy dtype
 dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
@@ -60,20 +63,10 @@ dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 class Dimension(object):
     """NetCDF dimensjon"""
 
-    def __init__(self, name, size=None, isunlimited=False):
+    def __init__(self, name, length=0, isunlimited=False):
         self.name = name
-        if size is None:
-            self._size = 0
-            self._isunlimited = True
-        else:
-            self._size = size
-            self._isunlimited = isunlimited
-
-    def __len__(self):
-        return self._size
-
-    def isunlimited(self):
-        return self._isunlimited
+        self.length = length
+        self.isUnlimited = isunlimited
 
 
 class _Attribute(object):
@@ -82,7 +75,7 @@ class _Attribute(object):
     def __init__(self, value):
         if isinstance(value, string_type):
             self.value = value
-            self.type = 'char'  # Not used in NcML??
+            self.type = 'String'
         else:
             self.value = np.atleast_1d(value)
             self.type = NCtype[np.asarray(value).dtype.char]
@@ -108,21 +101,13 @@ class Variable(_HasNCAttributes):
     """NetCDF variable"""
 
     # Ta attributter som ekstra argumenter
-    def __init__(self, ncstructure, name, nctype, dimensions=()):
+    def __init__(self, ncstructure, name, nctype, shape=()):
         self.structure = ncstructure
         self.name = name
         self.nctype = nctype
-        self.dimensions = dimensions
-        self.shape = tuple([len(self.structure.dimensions[d])
-                            for d in self.dimensions])
-        self.ndim = len(self.shape)
+        self.shape = shape
+        # self.ndim = len(self.dimensions)
         _HasNCAttributes.__init__(self)
-
-    def __len__(self):
-        if self.shape:
-            return self.shape[0]
-        else:
-            return 0  # Scalar variables, shape = ()
 
 
 class NCstructure(_HasNCAttributes):
@@ -154,7 +139,7 @@ class NCstructure(_HasNCAttributes):
                 # Slå sammen til createVariable
                 v = Variable(ncstructure=nc, name=name,
                              nctype=NCtype[var.dtype.char],
-                             dimensions=var.dimensions)
+                             shape=var.dimensions)
                 nc.add_variable(v)
                 # Variable attributes
                 for att in var.ncattrs():
@@ -265,18 +250,18 @@ class NCstructure(_HasNCAttributes):
             # Dimensions
             if key == 'dimension':
                 for node in group:
+                    name = node.attrib['name']
+                    length = node.attrib['length']
                     isunlimited = 'isUnlimited' in node.attrib.keys()
-                    nc.add_dimension(Dimension(name=node.attrib['name'],
-                                               size=int(node.attrib['length']),
-                                               isunlimited=isunlimited))
+                    nc.add_dimension(Dimension(name, length, isunlimited))
 
             # Global attributes
             elif key == 'attribute':
                 for node in group:
                     name = node.attrib['name']
                     value = node.attrib['value']
-                    nctype = node.attrib.get('type', 'char')
-                    if nctype != 'char':
+                    nctype = node.attrib.get('type', 'String')
+                    if nctype != 'String':
                         value = np.array([dtype[nctype](v)
                                           for v in value.split()])
                     nc.set_attribute(name, value)
@@ -284,20 +269,22 @@ class NCstructure(_HasNCAttributes):
             # Variables
             elif key == 'variable':
                 for node in group:
-                    dimensions = tuple(node.attrib['shape'].split())
+                    shape = tuple(node.attrib['shape'].split())
                     var = Variable(ncstructure=nc,
                                    name=node.attrib['name'],
                                    nctype=node.attrib['type'],
-                                   dimensions=dimensions)
+                                   shape=shape)
                     nc.add_variable(var)
-                    for att in node:  # All children are netCDF attributes
-                        name = att.attrib['name']
-                        value = att.attrib['value']
-                        nctype = att.attrib.get('type', 'char')
-                        if nctype != 'char':
-                            value = np.array([dtype[nctype](v)
-                                              for v in value.split()])
-                        var.set_attribute(name, value)
+                    # Handle variable attributes, ignore values
+                    for child in node:
+                        if child.tag.split('}')[1] == 'attribute':
+                            name = child.attrib['name']
+                            value = child.attrib['value']
+                            nctype = child.attrib.get('type', 'String')
+                            if nctype != 'String':
+                                value = np.array([dtype[nctype](v)
+                                                  for v in value.split()])
+                            var.set_attribute(name, value)
 
         return nc
 
@@ -312,20 +299,20 @@ class NCstructure(_HasNCAttributes):
 
         fid.write('dimensions:\n')
         for name, dim in self.dimensions.items():
-            if dim.isunlimited():
+            if dim.isUnlimited:
                 fid.write('\t{} = UNLIMITED ; // ({} currently)\n'.
-                          format(name, len(dim)))
+                          format(name, dim.length))
             else:
-                fid.write('\t{} = {} ;\n'.format(name, len(dim)))
+                fid.write('\t{} = {} ;\n'.format(name, dim.length))
 
         fid.write('variables:\n')
         for name, var in self.variables.items():
             fid.write('\t{} {}'.format(var.nctype, name))
-            if var.ndim > 0:
+            if len(var.shape) > 0:
                 fid.write('(')
-                for d in var.dimensions[:-1]:
+                for d in var.shape[:-1]:
                     fid.write('{}, '.format(d))
-                fid.write('{}) ;\n'.format(var.dimensions[-1]))
+                fid.write('{}) ;\n'.format(var.shape[-1]))
             else:
                 fid.write(' ;\n')
 
@@ -361,13 +348,13 @@ class NCstructure(_HasNCAttributes):
 
         # Dimensions
         for name, dim in self.dimensions.items():
-            if dim.isunlimited():
+            if dim.isUnlimited:
                 fid.write('  <dimension name="{}" length="{}"'.
-                          format(name, len(dim)))
+                          format(name, dim.length))
                 fid.write(' isUnlimited="true" />\n')
             else:
                 fid.write('  <dimension name="{}" length="{}" />\n'.
-                          format(name, len(dim)))
+                          format(name, dim.length))
 
         # Global attributes
         for attname, att in self.attributes.items():
@@ -376,10 +363,10 @@ class NCstructure(_HasNCAttributes):
 
         # Variables
         for name, var in self.variables.items():
-            if var.ndim > 0:
+            if len(var.shape) > 0:
+
                 fid.write('  <variable name="{}" shape="{}" type="{}">\n'.
-                          format(name, ' '.join(var.dimensions),
-                                 var.nctype))
+                          format(name, ' '.join(var.shape),  var.nctype))
             else:
                 fid.write('  <variable name="{}" type="{}">\n'.
                           format(name, var.nctype))
@@ -393,7 +380,8 @@ class NCstructure(_HasNCAttributes):
                 else:
                     fid.write('    <attribute name=')
                     fid.write('"{}" type="{}" value="{}" />\n'.
-                              format(attname, att.type, vector2ncml(att.value)))
+                              format(attname, att.type,
+                                     vector2ncml(att.value)))
 
             fid.write('  </variable>\n')
 

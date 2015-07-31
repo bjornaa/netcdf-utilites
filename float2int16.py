@@ -130,9 +130,9 @@ f1 = Dataset(args.outfile, mode='w', format=args.format)
 for name in f0.ncattrs():
     setattr(f1, name, getattr(f0, name))
 
-# ------------------
+# ----------------
 # Copy dimensions
-# ------------------
+# ----------------
 
 for name, dim in f0.dimensions.items():
     if dim.isunlimited():
