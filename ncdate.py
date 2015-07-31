@@ -83,7 +83,7 @@ except RuntimeError:
 
 
 # Check function for time variables
-# Criterium: 1D and "since" in units
+# Criterion: 1D and "since" in units
 def is_time_variable(name):
     """Check if a variables is a time variable"""
     answer = False
@@ -126,14 +126,12 @@ else:  # Time variable specified with --time-variable option
         print("ERROR: Can not find variable {}".format(timevar))
         sys.exit(1)
     # Is it a time variable?
-    if not is_time_variable(timevar):
-        print("ERROR: Variable {} is not a time variable".format(timevar))
+    assert(is_time_variable(timevar),
+           'ERROR: Variable {} is not a time variable'.format(timevar))
 
 # -------------------
 # Get the time value
 # -------------------
-
-tvar = fid.variables[timevar]
 
 try:
     time_value = tvar[args.record]

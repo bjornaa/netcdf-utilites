@@ -58,7 +58,8 @@ def ncgen(ncstruc, f):
         if '_FillValue' in attributes:
             f.write("    v = ncid.createVariable('{}', '{}', {}".
                     format(name, type_abbrev[var.nctype], str(var.dimensions)))
-            f.write(", fill_value={})\n".format(attributes['_FillValue'].value[0]))
+            f.write(", fill_value={})\n".
+                    format(attributes['_FillValue'].value[0]))
             attributes.pop('_FillValue')
         else:
             f.write("    v = ncid.createVariable('{}', '{}', {}\n".

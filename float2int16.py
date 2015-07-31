@@ -47,7 +47,7 @@ except ImportError:
 # -------------------------
 
 
-# Varibles to convert into 16-bit integers
+# Variables to convert into 16-bit integers
 # Format: variable = Rescale(scale_factor, add_offset)
 Rescale = collections.namedtuple('Rescale', ('scale_factor', 'add_offset'))
 scale_dictionary = dict(

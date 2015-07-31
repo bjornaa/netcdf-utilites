@@ -7,11 +7,6 @@ Class for structure of a classic netCDF file
 
 """
 
-# Ha klassemetoder
-# from_CDL, from_NcML
-# Lag tekst til python funksjon som definerer filen
-#
-
 from __future__ import unicode_literals
 
 import sys
@@ -50,7 +45,7 @@ if PY2:
 #           }
 
 # Conversion from numpy dtype.char to NetCDF type
-NCtype = dict(h='short', i='int', f='float', d='double')
+NCtype = dict(h='short', i='int', f='float', d='double', S='String')
 
 # Conversion from nctype to numpy dtype
 dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
@@ -61,7 +56,7 @@ dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 
 
 class Dimension(object):
-    """NetCDF dimensjon"""
+    """NetCDF dimension"""
 
     def __init__(self, name, length=0, isunlimited=False):
         self.name = name
@@ -207,7 +202,6 @@ class NCstructure(_HasNCAttributes):
                 dims[-1] = dims[-1][:-1]  # remove trailing ')'
             else:
                 name = words[1]
-                ndim = 0
                 dims = []
             # print name, nctype, tuple(dims)
             # Uelegant med de to linjene under, kombinere til en
@@ -340,7 +334,7 @@ class NCstructure(_HasNCAttributes):
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<netcdf xmlns="http://www.unidata.ucar.edu/')
         fid.write('namespaces/netcdf/ncml-2.2"')
-        # Determine wether location should include .nc
+        # Determine whether location should include .nc
         location = self.location
         if not location.endswith('.nc'):
             location += '.nc'
