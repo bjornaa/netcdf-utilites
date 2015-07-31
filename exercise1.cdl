@@ -1,0 +1,22 @@
+netcdf file:C:/temp/exercise1.ncml {
+
+ dimensions:
+  time = UNLIMITED;   // (2 currently)  
+  lat = 3;   
+  lon = 4;   
+
+ variables:
+  int rh(time, lat, lon);
+   :long_name = "relative humidity";
+   :units = "percent";
+  double T(time, lat, lon);
+   :long_name = "surface temperature";
+   :units = "C";
+  float lat(lat);
+   :units = "degrees_north";
+  float lon(lon);
+   :units = "degrees_east";
+  int time(time);
+   :units = "hours";
+        // Global Attributes:
+ :title = "Example Data";
