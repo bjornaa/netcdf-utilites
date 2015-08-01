@@ -1,0 +1,44 @@
+2015-08-01
+
+Trenger litt "sanitetssjekk"
+
+Skal ikke kunne legge til variable uten at dimensjonene finnes.
+Skal ikke kunne fjerne en dimensjon som er brukt av en variabel
+Skal ikke ha attributter til ikke-eksisterende variable
+o.l.
+
+Frittstående dimensjon gir god mening.
+
+Frittstående variabel??
+  Da er det for dårlig med bare et tuppel med navn som shape
+  må ha tuppel med dimensjons-objekter.
+  Legge inn i struktur => nødvendige dimensjoner legges inn
+  (om de ikke allerede er der)
+     Alternativt: kreve at dimensjonene allerede lagt inn.
+
+Noen fordeler? En variabel kan tilhøre flere strukturer
+Kopiere og modifisere strukturer.
+struc0 = NCstructure.from_file('a.nc')
+struc1 = NCstructure('b.nc')
+for var in struc0.variables:
+    struc1.add_variable(var)
+
+Kan ha frittstående attributter:
+    kan legges til struktur eller variabel
+
+Trenger litt konsistens:
+Bruker add_dimension, add_variable, set_attribute
+Stilig å bruke dictionary terminology.
+struc[name] = variable
+Åpner for inkonsistens: name kan bli forskjellig fra variabelens interne navn
+struc.add_variable(var) er kanskje bedre:
+internt: struc[var.name] = variable
+
+Må ha ekstra sanitetssjekk: Hva om variable/dimensjoner med samme navn
+Mest fornuftige oppførsel: skrive over, litt av poenget er å kunne modifisere.
+
+Datastruktur:
+Dimensjoner i struktur eller variabel:
+f.dimensions[navn] fungerer bra, men vil ha sortert.
+Bruke SortedDict, men koble ut __setitem__
+

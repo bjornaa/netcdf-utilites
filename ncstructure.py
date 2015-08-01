@@ -291,7 +291,8 @@ class NCstructure(_HasNCAttributes):
         ncname = os.path.splitext(ncname)[0]  # Remove ".nc"
         fid.write('netcdf {} {{\n'.format(ncname))
 
-        fid.write('dimensions:\n')
+        if self.dimensions:
+            fid.write('dimensions:\n')
         for name, dim in self.dimensions.items():
             if dim.isUnlimited:
                 fid.write('\t{} = UNLIMITED ; // ({} currently)\n'.
@@ -299,7 +300,8 @@ class NCstructure(_HasNCAttributes):
             else:
                 fid.write('\t{} = {} ;\n'.format(name, dim.length))
 
-        fid.write('variables:\n')
+        if self.variables:
+            fid.write('variables:\n')
         for name, var in self.variables.items():
             fid.write('\t{} {}'.format(var.nctype, name))
             if len(var.shape) > 0:
@@ -381,6 +383,8 @@ class NCstructure(_HasNCAttributes):
 
         fid.write('</netcdf>\n')
 
+    def delete_variable(self, var):
+        del self.variables[var]
 
 def isplit_noloss(predicate, iterator):
     """Splits an iterator where predicate fails
