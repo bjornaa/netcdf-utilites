@@ -7,9 +7,6 @@ from ncstructure import *
 
 class TestParseAttribute(unittest.TestCase):
 
-    def setUp(self):
-        print "kjrer setUp"
-
     def test_ASCII(self):
         """Handle strings correctly"""
         line = 'var:att = "ASCII text" ;'
@@ -60,9 +57,6 @@ class TestParseAttribute(unittest.TestCase):
         name, value = parse_attribute(line4)
         self.assertEqual(name, 'a')
         self.assertTrue(np.alltrue(value == np.array([1., 2e16, -4.2e11])))
-
-    def tearDown(self):
-        print "Kjrer tearDown"
 
 if __name__ == '__main__':
     unittest.main()

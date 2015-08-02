@@ -6,8 +6,8 @@ from ncstructure import *
 
 import StringIO
 
-class TestWriteCDL(unittest.TestCase):
 
+class TestWriteCDL(unittest.TestCase):
     def test_empty(self):
         """Test an empty structure"""
         # Make an empty netCDF structure
@@ -16,8 +16,8 @@ class TestWriteCDL(unittest.TestCase):
         output = StringIO.StringIO()
         struc0.write_CDL(output)
         # Check the CDL
-        target = "netcdf a {\n}\n"    # ncdump of empty file
-        assert(output.getvalue() == target)
+        target = "netcdf a {\n}\n"  # ncdump of empty file
+        assert (output.getvalue() == target)
 
     def test_dimensions_only(self):
         """Test a structure with only dimensions"""
@@ -29,7 +29,7 @@ class TestWriteCDL(unittest.TestCase):
         struc0.write_CDL(output)
         # Check the CDL
         target = "netcdf a {\ndimensions:\n\tX = 10 ;\n}\n"  # ncdump
-        assert(output.getvalue() == target)
+        assert (output.getvalue() == target)
 
     def test_global_att_only(self):
         struc0 = NCstructure('a.nc')  # Empty structure
@@ -41,11 +41,8 @@ class TestWriteCDL(unittest.TestCase):
                  '\t\t:purpose = "test" ;',
                  '}\n']
         target = '\n'.join(lines)
-        assert(output.getvalue() == target)
+        assert (output.getvalue() == target)
+
 
 if __name__ == '__main__':
     unittest.main()
-
-
-        
-

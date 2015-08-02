@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 
 import sys
 import os
+from operator import attrgetter, itemgetter
 from collections import OrderedDict
 import itertools as it
 import codecs
@@ -54,26 +55,83 @@ dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 # if PY2:
 #    NCtype[unicode] = 'char'
 
-
 class Dimension(object):
-    """NetCDF dimension"""
+    def __init__(self, name, length, isUnlimited=False):
+        self._name = name
+        self._length = length
+        self._isUnlimited = isUnlimited
 
-    def __init__(self, name, length=0, isunlimited=False):
-        self.name = name
-        self.length = length
-        self.isUnlimited = isunlimited
+    name = property(attrgetter('_name'))
+    length = property(attrgetter('_length'))
+    isUnlimited = property(attrgetter('_isUnlimited'))
+
+    # For compatibility with netcdf4-python
+    def __len__(self):
+        return self._length
+
+    def __repr__(self):
+        if self._isUnlimited:
+            return "Dimension('{_name}', {_length}, isUnlimited=True)".format(
+                **self.__dict__)
+        else:
+            return "Dimension('{_name}', {_length})".format(**self.__dict__)
 
 
-class _Attribute(object):
+class Dimensions(object):
+    def __init__(self):
+        self._items = dict()
+        self._order = []
+
+    def __repr__(self):
+        return ", ".join(name for name in self._order)
+
+    def append(self, dim):
+        if not isinstance(dim, Dimension):
+            raise ValueError("Argument must be a dimension")
+        self._order.append(dim.name)
+        self._items[dim.name] = dim
+
+    def __getitem__(self, name):
+        return self._items[name]
+
+    # Not important ?
+    def __delitem__(self, name):
+        del self._items[name]
+        self._order.remove(name)
+
+    # Make an iterator
+    def __iter__(self):
+        self._nameiter = iter(self._order)
+        return self
+
+    def next(self):
+        name = next(self._nameiter)
+        return self._items[name]
+
+    def items(self):
+        return zip(self._order, [self._items[name] for name in self._order])
+
+    def __len__(self):
+        return len(self._order)
+
+
+# Endre for å kunne modifisere value?
+class Attribute(tuple):
     """NetCDF attribute"""
 
-    def __init__(self, value):
+    __slots__ = ()
+
+    def __new__(cls, name, value):
         if isinstance(value, string_type):
-            self.value = value
-            self.type = 'String'
+            type = 'String'
         else:
-            self.value = np.atleast_1d(value)
-            self.type = NCtype[np.asarray(value).dtype.char]
+            value = np.atleast_1d(value)
+            type = NCtype[np.asarray(value).dtype.char]
+        return tuple.__new__(cls, (name, type, value))
+
+    name = property(itemgetter(0))
+    type = property(itemgetter(1))
+    value = property(itemgetter(2))
 
 
 class _HasNCAttributes(object):
@@ -82,7 +140,7 @@ class _HasNCAttributes(object):
         self.attributes = OrderedDict()
 
     def set_attribute(self, key, value):
-        self.attributes[key] = _Attribute(value)
+        self.attributes[key] = Attribute(key, value)
 
     # Hva om attribute ikke finnes?
     def delete_attribute(self, key):
@@ -92,7 +150,7 @@ class _HasNCAttributes(object):
         return self.attributes.keys()
 
 
-class Variable(_HasNCAttributes):
+class Variable(_HasNCAttributes, Dimensions):
     """NetCDF variable"""
 
     # Ta attributter som ekstra argumenter
@@ -103,17 +161,19 @@ class Variable(_HasNCAttributes):
         self.shape = shape
         # self.ndim = len(self.dimensions)
         _HasNCAttributes.__init__(self)
+        self._Dimensions = Dimensions()
 
 
-class NCstructure(_HasNCAttributes):
+class NCstructure(_HasNCAttributes, Dimensions):
     def __init__(self, location=None):
         self.location = location
-        self.dimensions = OrderedDict()
+        self.dimensions = Dimensions()
         self.variables = OrderedDict()
         _HasNCAttributes.__init__(self)
 
     def add_dimension(self, dimension):
-        self.dimensions.setdefault(dimension.name, dimension)
+        # self.dimensions.setdefault(dimension.name, dimension)
+        self.dimensions.append(dimension)
 
     def add_variable(self, variable):
         self.variables.setdefault(variable.name, variable)
@@ -362,7 +422,7 @@ class NCstructure(_HasNCAttributes):
             if len(var.shape) > 0:
 
                 fid.write('  <variable name="{}" shape="{}" type="{}">\n'.
-                          format(name, ' '.join(var.shape),  var.nctype))
+                          format(name, ' '.join(var.shape), var.nctype))
             else:
                 fid.write('  <variable name="{}" type="{}">\n'.
                           format(name, var.nctype))
@@ -385,6 +445,7 @@ class NCstructure(_HasNCAttributes):
 
     def delete_variable(self, var):
         del self.variables[var]
+
 
 def isplit_noloss(predicate, iterator):
     """Splits an iterator where predicate fails
