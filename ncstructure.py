@@ -32,19 +32,6 @@ string_type = str  # python 3
 if PY2:
     string_type = basestring
 
-# Mapping from dtype.char or python type to NetCDF type
-# NCtype = {float: 'double',
-#           int  : 'int',
-#           str  : 'char',
-#           'd'  : 'double',
-#           'f'  : 'float',
-#           'i'  : 'int',
-#           'h'  : 'short',
-#           'b'  : 'byte',
-#           'S'  : 'char',
-#           'U'  : 'char',
-#           }
-
 # Conversion from numpy dtype.char to NetCDF type
 NCtype = dict(h='short', i='int', f='float', d='double', S='String')
 
@@ -78,6 +65,7 @@ class Dimension(object):
 
 
 class Dimensions(object):
+    """Mix-in class for handling dimensions"""
     def __init__(self):
         self._items = dict()
         self._order = []
@@ -115,24 +103,28 @@ class Dimensions(object):
         return len(self._order)
 
 
-# Endre for å kunne modifisere value?
-class Attribute(tuple):
+class Attribute(object):
     """NetCDF attribute"""
 
-    __slots__ = ()
-
-    def __new__(cls, name, value):
+    def __init__(self, name, value):
+        self._name = name
         if isinstance(value, string_type):
-            type = 'String'
+            self._type = 'String'
+            self._value = value
         else:
-            value = np.atleast_1d(value)
-            type = NCtype[np.asarray(value).dtype.char]
-        return tuple.__new__(cls, (name, type, value))
+            self._value = np.atleast_1d(value)
+            self._type = NCtype[np.asarray(value).dtype.char]
 
-    name = property(itemgetter(0))
-    type = property(itemgetter(1))
-    value = property(itemgetter(2))
+    name = property(attrgetter('_name'))
+    type = property(attrgetter('_type'))
+    value = property(attrgetter('_value'))
 
+    def __repr__(self):
+        if self._type == 'String':
+            out = "Attribute('{_name}', '{_type}', '{_value}')"
+        else:
+            out = "Attribute('{_name}', '{_type}', {_value})"
+        return out.format(**self.__dict__).encode('utf-8')
 
 class _HasNCAttributes(object):
     # Open for kwargs
