@@ -11,7 +11,7 @@ from __future__ import unicode_literals
 
 import sys
 import os
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 from collections import OrderedDict
 import itertools as it
 import codecs
@@ -33,7 +33,8 @@ if PY2:
     string_type = basestring
 
 # Conversion from numpy dtype.char to NetCDF type
-NCtype = dict(h='short', i='int', f='float', d='double', S='String')
+# May change to l -> long (not supported in NetCDF 3)
+NCtype = dict(h='short', i='int', l='int', f='float', d='double', S='String')
 
 # Conversion from nctype to numpy dtype
 dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
@@ -66,6 +67,7 @@ class Dimension(object):
 
 class Dimensions(object):
     """Mix-in class for handling dimensions"""
+
     def __init__(self):
         self._items = dict()
         self._order = []
@@ -126,46 +128,82 @@ class Attribute(object):
             out = "Attribute('{_name}', '{_type}', {_value})"
         return out.format(**self.__dict__).encode('utf-8')
 
-class _HasNCAttributes(object):
-    # Open for kwargs
+
+# Same structure as Dimensions, could be unified?
+class Attributes(object):
+    """Mix-in class for handling attributes"""
+
     def __init__(self):
-        self.attributes = OrderedDict()
+        self._items = dict()
+        self._order = []
 
-    def set_attribute(self, key, value):
-        self.attributes[key] = Attribute(key, value)
+    # Make something better
+    def __repr__(self):
+        return ", ".join(name for name in self._order)
 
-    # Hva om attribute ikke finnes?
-    def delete_attribute(self, key):
-        del self[key]
+    def append(self, att):
+        if not isinstance(att, Attribute):
+            raise ValueError("Argument must be an attribute")
+        self._order.append(att.name)
+        self._items[att.name] = att
 
-    def ncattrs(self):
-        return self.attributes.keys()
+    def __getitem__(self, name):
+        return self._items[name]
+
+    # Not important ?
+    def __delitem__(self, name):
+        del self._items[name]
+        self._order.remove(name)
+
+    # Make an iterator
+    def __iter__(self):
+        self._nameiter = iter(self._order)
+        return self
+
+    def next(self):
+        name = next(self._nameiter)
+        return self._items[name]
+
+    def items(self):
+        return zip(self._order, [self._items[name] for name in self._order])
+
+    def __len__(self):
+        return len(self._order)
 
 
-class Variable(_HasNCAttributes, Dimensions):
+class Variable(object):
     """NetCDF variable"""
 
-    # Ta attributter som ekstra argumenter
+    # Could include attributes as extra arguments
     def __init__(self, ncstructure, name, nctype, shape=()):
         self.structure = ncstructure
         self.name = name
         self.nctype = nctype
         self.shape = shape
         # self.ndim = len(self.dimensions)
-        _HasNCAttributes.__init__(self)
-        self._Dimensions = Dimensions()
+        self.dimensions = Dimensions()
+        self.attributes = Attributes()
+
+    # def add_dimension(self, dimension):
+    #     self.dimensions.append(dimension)
+
+    def add_attribute(self, attribute):
+        self.attributes.append(attribute)
 
 
-class NCstructure(_HasNCAttributes, Dimensions):
+class NCstructure(object):
     def __init__(self, location=None):
         self.location = location
         self.dimensions = Dimensions()
         self.variables = OrderedDict()
-        _HasNCAttributes.__init__(self)
+        # _HasNCAttributes.__init__(self)
+        self.attributes = Attributes()
 
     def add_dimension(self, dimension):
-        # self.dimensions.setdefault(dimension.name, dimension)
         self.dimensions.append(dimension)
+
+    def add_attribute(self, attribute):
+        self.attributes.append(attribute)
 
     def add_variable(self, variable):
         self.variables.setdefault(variable.name, variable)
@@ -191,12 +229,12 @@ class NCstructure(_HasNCAttributes, Dimensions):
                 # Variable attributes
                 for att in var.ncattrs():
                     value = getattr(var, att)
-                    v.set_attribute(att, value)
+                    v.add_attribute(Attribute(att, value))
 
             # Global attributes
             for att in fid.ncattrs():
                 value = getattr(fid, att)
-                nc.set_attribute(att, value)
+                nc.add_attribute(Attribute(att, value))
 
         return nc
 
@@ -262,14 +300,14 @@ class NCstructure(_HasNCAttributes, Dimensions):
             # Attribute lines
             for line in chunk[1:]:
                 name, value = parse_attribute(line)
-                var.set_attribute(name, value)
+                var.add_attribute(Attribute(name, value))
 
         # Global attributes
         globatt_lines = it.takewhile(lambda x: x.lstrip().startswith(':'),
                                      lines)
         for line in globatt_lines:
             name, value = parse_attribute(line)
-            nc.set_attribute(name, value)
+            nc.add_attribute(Attribute(name, value))
 
         return nc
 
@@ -310,7 +348,7 @@ class NCstructure(_HasNCAttributes, Dimensions):
                     if nctype != 'String':
                         value = np.array([dtype[nctype](v)
                                           for v in value.split()])
-                    nc.set_attribute(name, value)
+                    nc.add_attribute(Attribute(name, value))
 
             # Variables
             elif key == 'variable':
@@ -330,7 +368,7 @@ class NCstructure(_HasNCAttributes, Dimensions):
                             if nctype != 'String':
                                 value = np.array([dtype[nctype](v)
                                                   for v in value.split()])
-                            var.set_attribute(name, value)
+                            var.add_attribute(Attribute(name, value))
 
         return nc
 

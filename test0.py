@@ -33,7 +33,7 @@ class TestWriteCDL(unittest.TestCase):
 
     def test_global_att_only(self):
         struc0 = NCstructure('a.nc')  # Empty structure
-        struc0.set_attribute('purpose', 'test')
+        struc0.attributes.append(Attribute('purpose', 'test'))
         output = StringIO.StringIO()
         struc0.write_CDL(output)
         lines = ['netcdf a {\n',
