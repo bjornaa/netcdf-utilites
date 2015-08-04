@@ -23,7 +23,7 @@ class TestWriteCDL(unittest.TestCase):
         """Test a structure with only dimensions"""
         struc0 = NCstructure('a.nc')
         # Add a dimension
-        struc0.add_dimension(Dimension('X', 10))
+        struc0.createDimension('X', 10)
         # Write the CDL
         output = StringIO.StringIO()
         struc0.write_CDL(output)
@@ -32,8 +32,9 @@ class TestWriteCDL(unittest.TestCase):
         assert (output.getvalue() == target)
 
     def test_global_att_only(self):
+
         struc0 = NCstructure('a.nc')  # Empty structure
-        struc0.attributes.append(Attribute('purpose', 'test'))
+        struc0.createAttribute('purpose', 'test')
         output = StringIO.StringIO()
         struc0.write_CDL(output)
         lines = ['netcdf a {\n',

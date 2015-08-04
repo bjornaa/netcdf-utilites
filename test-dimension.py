@@ -2,11 +2,11 @@
 
 import unittest
 
-from ncstructure import Dimension, Dimensions
+#from ncstructure import Dimension, Dimensions
 
 
 class TestDimension(unittest.TestCase):
-    def test_create(self):
+    def rest_create(self):
         # Create some dimensions and check their repr
 
         lon = Dimension('lon', 360)
@@ -16,11 +16,11 @@ class TestDimension(unittest.TestCase):
         self.assertEqual(repr(lat), "Dimension('lat', 181)")
         self.assertEqual(repr(time), "Dimension('time', 0, isUnlimited=True)")
 
-    def test_missing_length(self):
+    def rest_missing_length(self):
         """Missing argument should raise TypeError"""
         self.assertRaises(TypeError, Dimension, 'lon')
 
-    def test_attributes(self):
+    def rest_attributes(self):
         lon = Dimension('lon', 360)
         self.assertEqual(lon.name, 'lon')
         self.assertEqual(lon.length, 360)
@@ -31,7 +31,7 @@ class TestDimension(unittest.TestCase):
 
 
 class TestDimensions(unittest.TestCase):
-    def test_create(self):
+    def rest_create(self):
         D = Dimensions()
         time = Dimension('time', 0, isUnlimited=True)
         D.append(time)

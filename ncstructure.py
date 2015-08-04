@@ -43,170 +43,81 @@ dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 # if PY2:
 #    NCtype[unicode] = 'char'
 
-class Dimension(object):
-    def __init__(self, name, length, isUnlimited=False):
-        self._name = name
-        self._length = length
-        self._isUnlimited = isUnlimited
 
-    name = property(attrgetter('_name'))
-    length = property(attrgetter('_length'))
-    isUnlimited = property(attrgetter('_isUnlimited'))
-
-    # For compatibility with netcdf4-python
-    def __len__(self):
-        return self._length
-
-    def __repr__(self):
-        if self._isUnlimited:
-            return "Dimension('{_name}', {_length}, isUnlimited=True)".format(
-                **self.__dict__)
-        else:
-            return "Dimension('{_name}', {_length})".format(**self.__dict__)
-
-
-class Dimensions(object):
-    """Mix-in class for handling dimensions"""
-
-    def __init__(self):
-        self._items = dict()
-        self._order = []
-
-    def __repr__(self):
-        return ", ".join(name for name in self._order)
-
-    def append(self, dim):
-        if not isinstance(dim, Dimension):
-            raise ValueError("Argument must be a dimension")
-        self._order.append(dim.name)
-        self._items[dim.name] = dim
-
-    def __getitem__(self, name):
-        return self._items[name]
-
-    # Not important ?
-    def __delitem__(self, name):
-        del self._items[name]
-        self._order.remove(name)
-
-    # Make an iterator
-    def __iter__(self):
-        self._nameiter = iter(self._order)
-        return self
-
-    def next(self):
-        name = next(self._nameiter)
-        return self._items[name]
-
-    def items(self):
-        return zip(self._order, [self._items[name] for name in self._order])
-
-    def __len__(self):
-        return len(self._order)
-
-
-class Attribute(object):
-    """NetCDF attribute"""
-
-    def __init__(self, name, value):
-        self._name = name
-        if isinstance(value, string_type):
-            self._type = 'String'
-            self._value = value
-        else:
-            self._value = np.atleast_1d(value)
-            self._type = NCtype[np.asarray(value).dtype.char]
-
-    name = property(attrgetter('_name'))
-    type = property(attrgetter('_type'))
-    value = property(attrgetter('_value'))
-
-    def __repr__(self):
-        if self._type == 'String':
-            out = "Attribute('{_name}', '{_type}', '{_value}')"
-        else:
-            out = "Attribute('{_name}', '{_type}', {_value})"
-        return out.format(**self.__dict__).encode('utf-8')
-
-
-# Same structure as Dimensions, could be unified?
-class Attributes(object):
-    """Mix-in class for handling attributes"""
-
-    def __init__(self):
-        self._items = dict()
-        self._order = []
-
-    # Make something better
-    def __repr__(self):
-        return ", ".join(name for name in self._order)
-
-    def append(self, att):
-        if not isinstance(att, Attribute):
-            raise ValueError("Argument must be an attribute")
-        self._order.append(att.name)
-        self._items[att.name] = att
-
-    def __getitem__(self, name):
-        return self._items[name]
-
-    # Not important ?
-    def __delitem__(self, name):
-        del self._items[name]
-        self._order.remove(name)
-
-    # Make an iterator
-    def __iter__(self):
-        self._nameiter = iter(self._order)
-        return self
-
-    def next(self):
-        name = next(self._nameiter)
-        return self._items[name]
-
-    def items(self):
-        return zip(self._order, [self._items[name] for name in self._order])
-
-    def __len__(self):
-        return len(self._order)
-
-
-class Variable(object):
-    """NetCDF variable"""
-
-    # Could include attributes as extra arguments
-    def __init__(self, ncstructure, name, nctype, shape=()):
-        self.structure = ncstructure
-        self.name = name
-        self.nctype = nctype
-        self.shape = shape
-        # self.ndim = len(self.dimensions)
-        self.dimensions = Dimensions()
-        self.attributes = Attributes()
-
-    # def add_dimension(self, dimension):
-    #     self.dimensions.append(dimension)
-
-    def add_attribute(self, attribute):
-        self.attributes.append(attribute)
 
 
 class NCstructure(object):
+    """NetCDF variable"""
+
+    class Dimension(object):
+        def __init__(self, name, length, isUnlimited=False):
+            self._name = name
+            self.length = length
+            self.isUnlimited = isUnlimited
+
+        name = property(attrgetter('_name'))
+
+        # Compatibility functions with netcdf4-python
+        def __len__(self):
+            return self.length
+
+        def isunlimited(self):
+            return self.isUnlimited
+
+    class Attribute(object):
+
+        def __init__(self, name, value):
+            self.name = name
+            if isinstance(value, string_type):
+                self.type = 'String'
+                self.value = value
+            else:
+                self.value = np.atleast_1d(value)
+                self.type = NCtype[np.asarray(value).dtype.char]
+
+    class Variable(object):
+
+        def __init__(self, name, nctype, shape=()):
+            self.name = name
+            self.nctype = nctype
+            self.shape = tuple(shape)
+            self.attributes = OrderedDict()
+
+        def createAttribute(self, name, value):
+            att = NCstructure.Attribute(name, value)
+            self.attributes[name] = att
+            return att
+
+    # NCstructure.__init__
     def __init__(self, location=None):
         self.location = location
-        self.dimensions = Dimensions()
+        self.dimensions = OrderedDict()
         self.variables = OrderedDict()
-        # _HasNCAttributes.__init__(self)
-        self.attributes = Attributes()
+        self.attributes = OrderedDict()
 
-    def add_dimension(self, dimension):
-        self.dimensions.append(dimension)
+    def createDimension(self, name, length=None, isUnlimited=False):
+        if length is None:
+            unlim = True
+            len_ = 0
+        else:
+            unlim = isUnlimited
+            len_ = length
+        dim = self.Dimension(name, len_, unlim)
+        self.dimensions[name] = dim
+        return dim
 
-    def add_attribute(self, attribute):
-        self.attributes.append(attribute)
+    def createAttribute(self, name, value):
+        att = self.Attribute(name, value)
+        self.attributes[name] = att
+        return att
 
-    def add_variable(self, variable):
-        self.variables.setdefault(variable.name, variable)
+    def createVariable(self, name, nctype, shape):
+        # Sanity check
+        for d in shape:
+            assert d in self.dimensions.keys()
+        var = self.Variable(name, nctype, shape)
+        self.variables[name] = var
+        return var
 
     @classmethod
     def from_file(cls, filename):
@@ -217,24 +128,21 @@ class NCstructure(object):
             nc = cls(location=filename)
 
             for name, dim in fid.dimensions.items():
-                d = Dimension(name, len(dim), dim.isunlimited())
-                nc.add_dimension(d)
+                nc.createDimension(name, len(dim), dim.isunlimited())
 
             for name, var in fid.variables.items():
                 # Slå sammen til createVariable
-                v = Variable(ncstructure=nc, name=name,
-                             nctype=NCtype[var.dtype.char],
-                             shape=var.dimensions)
-                nc.add_variable(v)
+
+                nctype = NCtype[var.dtype.char]
+                v = nc.createVariable(name, nctype, shape=var.dimensions)
+
                 # Variable attributes
                 for att in var.ncattrs():
-                    value = getattr(var, att)
-                    v.add_attribute(Attribute(att, value))
+                    v.createAttribute(att, getattr(var, att))
 
             # Global attributes
             for att in fid.ncattrs():
-                value = getattr(fid, att)
-                nc.add_attribute(Attribute(att, value))
+                nc.createAttribute(att, getattr(fid, att))
 
         return nc
 
@@ -265,7 +173,7 @@ class NCstructure(object):
                 size = int(words[5][1:])  # Skip "(" in
             else:
                 size = int(words[2])
-            nc.add_dimension(Dimension(words[0], size, isunlimited))
+            nc.createDimension(words[0], size, isunlimited)
 
         # Variables
         def isvarline(line):
@@ -293,21 +201,19 @@ class NCstructure(object):
             else:
                 name = words[1]
                 dims = []
-            # print name, nctype, tuple(dims)
-            # Uelegant med de to linjene under, kombinere til en
-            var = Variable(nc, name, nctype, tuple(dims))
-            nc.add_variable(var)
+
+            var = nc.createVariable(name, nctype, tuple(dims))
             # Attribute lines
             for line in chunk[1:]:
                 name, value = parse_attribute(line)
-                var.add_attribute(Attribute(name, value))
+                var.createAttribute(name, value)
 
         # Global attributes
         globatt_lines = it.takewhile(lambda x: x.lstrip().startswith(':'),
                                      lines)
         for line in globatt_lines:
             name, value = parse_attribute(line)
-            nc.add_attribute(Attribute(name, value))
+            nc.createAttribute(name, value)
 
         return nc
 
@@ -337,7 +243,7 @@ class NCstructure(object):
                     name = node.attrib['name']
                     length = node.attrib['length']
                     isunlimited = 'isUnlimited' in node.attrib.keys()
-                    nc.add_dimension(Dimension(name, length, isunlimited))
+                    nc.createDimension(name, length, isunlimited)
 
             # Global attributes
             elif key == 'attribute':
@@ -348,17 +254,14 @@ class NCstructure(object):
                     if nctype != 'String':
                         value = np.array([dtype[nctype](v)
                                           for v in value.split()])
-                    nc.add_attribute(Attribute(name, value))
+                    nc.createAttribute(name, value)
 
             # Variables
             elif key == 'variable':
                 for node in group:
                     shape = tuple(node.attrib['shape'].split())
-                    var = Variable(ncstructure=nc,
-                                   name=node.attrib['name'],
-                                   nctype=node.attrib['type'],
-                                   shape=shape)
-                    nc.add_variable(var)
+                    var = nc.createVariable(node.attrib['name'],
+                                            node.attrib['type'], shape)
                     # Handle variable attributes, ignore values
                     for child in node:
                         if child.tag.split('}')[1] == 'attribute':
@@ -368,7 +271,7 @@ class NCstructure(object):
                             if nctype != 'String':
                                 value = np.array([dtype[nctype](v)
                                                   for v in value.split()])
-                            var.add_attribute(Attribute(name, value))
+                            var.createAttribute(name, value)
 
         return nc
 
