@@ -4,7 +4,8 @@ from __future__ import unicode_literals
 import unittest
 import numpy as np
 
-#from ncstructure import Attribute, Attributes
+
+# from ncstructure import Attribute, Attributes
 
 
 class TestAttribute(unittest.TestCase):
@@ -45,13 +46,13 @@ class TestAttribute(unittest.TestCase):
 
     def rest_type(self):
         att = Attribute('version', 2)
-        self.assertEqual(att.type, 'int') # 'long' in netCDF4
+        self.assertEqual(att.type, 'int')  # 'long' in netCDF4
         att = Attribute('version', np.array(2, dtype=np.int16))
         self.assertEqual(att.type, 'short')
         att = Attribute('version', np.array(2, dtype=np.int32))
         self.assertEqual(att.type, 'int')
         att = Attribute('version', np.array(2, dtype=np.int64))
-        self.assertEqual(att.type, 'int') # 'long' in netCDF4
+        self.assertEqual(att.type, 'int')  # 'long' in netCDF4
 
         att = Attribute('version', np.array(3.14))
         self.assertEqual(att.type, 'double')
@@ -62,20 +63,18 @@ class TestAttribute(unittest.TestCase):
 
 
 class TestAttributes(unittest.TestCase):
-
     def rest_create(self):
-         A = Attributes()
+        A = Attributes()
 
-         imr = 'Institute of Marine Research'
-         inst = Attribute('institution', imr)
+        imr = 'Institute of Marine Research'
+        inst = Attribute('institution', imr)
 
-         A.append(inst)
-         A.append(Attribute('version', 2.0))
+        A.append(inst)
+        A.append(Attribute('version', 2.0))
 
-         self.assertEqual(A['institution'].value, imr)
-         self.assertEqual(A['institution'].name, 'institution')
-         self.assertEqual(A['version'].value, 2.0)
-
+        self.assertEqual(A['institution'].value, imr)
+        self.assertEqual(A['institution'].name, 'institution')
+        self.assertEqual(A['version'].value, 2.0)
 
     def rest_iterate(self):
         A = Attributes()

@@ -44,12 +44,11 @@ dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 #    NCtype[unicode] = 'char'
 
 
-
-
 class NCstructure(object):
     """NetCDF variable"""
 
     class Dimension(object):
+
         def __init__(self, name, length, isUnlimited=False):
             self._name = name
             self.length = length
@@ -69,11 +68,11 @@ class NCstructure(object):
         def __init__(self, name, value):
             self.name = name
             if isinstance(value, string_type):
-                self.type = 'String'
+                self.nctype = 'String'
                 self.value = value
             else:
                 self.value = np.atleast_1d(value)
-                self.type = NCtype[np.asarray(value).dtype.char]
+                self.nctype = NCtype[np.asarray(value).dtype.char]
 
     class Variable(object):
 
@@ -123,7 +122,6 @@ class NCstructure(object):
     def from_file(cls, filename):
         """Extract the structure from a netCDF file"""
 
-        # kutt om ikke netCDF fil
         with Dataset(filename) as fid:
             nc = cls(location=filename)
 
@@ -131,8 +129,6 @@ class NCstructure(object):
                 nc.createDimension(name, len(dim), dim.isunlimited())
 
             for name, var in fid.variables.items():
-                # Slå sammen til createVariable
-
                 nctype = NCtype[var.dtype.char]
                 v = nc.createVariable(name, nctype, shape=var.dimensions)
 
@@ -146,11 +142,10 @@ class NCstructure(object):
 
         return nc
 
-    # ---
-
     @classmethod
     def from_CDL(cls, filename):
         """Define the data structure from a CDL file"""
+
         fid = codecs.open(filename, encoding='utf-8')
 
         nc = NCstructure()
@@ -215,6 +210,7 @@ class NCstructure(object):
             name, value = parse_attribute(line)
             nc.createAttribute(name, value)
 
+        fid.close()
         return nc
 
     @classmethod
@@ -297,7 +293,7 @@ class NCstructure(object):
             fid.write('variables:\n')
         for name, var in self.variables.items():
             fid.write('\t{} {}'.format(var.nctype, name))
-            if len(var.shape) > 0:
+            if var.shape:
                 fid.write('(')
                 for d in var.shape[:-1]:
                     fid.write('{}, '.format(d))
@@ -313,7 +309,7 @@ class NCstructure(object):
                     fid.write('\t\t{}:{} = {} ;\n'.
                               format(name, attname, vector2cdl(att.value)))
 
-        if len(self.attributes) > 0:
+        if self.attributes:
             fid.write('\n// global attributes:\n')
             for attname, att in self.attributes.items():
                 if isinstance(att.value, string_type):
@@ -352,8 +348,7 @@ class NCstructure(object):
 
         # Variables
         for name, var in self.variables.items():
-            if len(var.shape) > 0:
-
+            if var.shape:
                 fid.write('  <variable name="{}" shape="{}" type="{}">\n'.
                           format(name, ' '.join(var.shape), var.nctype))
             else:
@@ -369,15 +364,12 @@ class NCstructure(object):
                 else:
                     fid.write('    <attribute name=')
                     fid.write('"{}" type="{}" value="{}" />\n'.
-                              format(attname, att.type,
+                              format(attname, att.nctype,
                                      vector2ncml(att.value)))
 
             fid.write('  </variable>\n')
 
         fid.write('</netcdf>\n')
-
-    def delete_variable(self, var):
-        del self.variables[var]
 
 
 def isplit_noloss(predicate, iterator):

@@ -4,7 +4,10 @@ import unittest
 
 from ncstructure import *
 
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO  # python 3
 
 
 class TestWriteCDL(unittest.TestCase):
@@ -13,7 +16,7 @@ class TestWriteCDL(unittest.TestCase):
         # Make an empty netCDF structure
         struc0 = NCstructure('a.nc')
         # Write the CDL
-        output = StringIO.StringIO()
+        output = StringIO()
         struc0.write_CDL(output)
         # Check the CDL
         target = "netcdf a {\n}\n"  # ncdump of empty file
@@ -25,17 +28,16 @@ class TestWriteCDL(unittest.TestCase):
         # Add a dimension
         struc0.createDimension('X', 10)
         # Write the CDL
-        output = StringIO.StringIO()
+        output = StringIO()
         struc0.write_CDL(output)
         # Check the CDL
         target = "netcdf a {\ndimensions:\n\tX = 10 ;\n}\n"  # ncdump
         assert (output.getvalue() == target)
 
     def test_global_att_only(self):
-
         struc0 = NCstructure('a.nc')  # Empty structure
         struc0.createAttribute('purpose', 'test')
-        output = StringIO.StringIO()
+        output = StringIO()
         struc0.write_CDL(output)
         lines = ['netcdf a {\n',
                  '// global attributes:',
