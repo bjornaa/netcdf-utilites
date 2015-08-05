@@ -20,7 +20,7 @@ class TestCDL(unittest.TestCase):
             subprocess.call(['ncdump', '-h', 'test.nc'], stdout=fid)
 
     def test_CDL(self):
-        """from_CDL followed bu write_CDL restore the CDL-file"""
+        """from_CDL followed by write_CDL restore the CDL-file"""
         nc = NCstructure.from_CDL('test.cdl')
         with codecs.open('mytest.cdl', 'w', encoding='utf-8') as fid:
             nc.write_CDL(fid)
