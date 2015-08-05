@@ -7,7 +7,7 @@ Class for structure of a classic netCDF file
 
 """
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 import sys
 import os
@@ -37,8 +37,7 @@ if PY2:
 NCtype = dict(h='short', i='int', l='int', f='float', d='double', S='String')
 
 # Conversion from nctype to numpy dtype
-dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
-
+Dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 
 # if PY2:
 #    NCtype[unicode] = 'char'
@@ -48,6 +47,7 @@ class NCstructure(object):
     """NetCDF variable"""
 
     class Dimension(object):
+        """NetCDF dimension"""
 
         def __init__(self, name, length, isUnlimited=False):
             self._name = name
@@ -64,6 +64,7 @@ class NCstructure(object):
             return self.isUnlimited
 
     class Attribute(object):
+        """NetCDF attribute"""
 
         def __init__(self, name, value):
             self.name = name
@@ -75,6 +76,7 @@ class NCstructure(object):
                 self.nctype = NCtype[np.asarray(value).dtype.char]
 
     class Variable(object):
+        """NetCDF variable"""
 
         def __init__(self, name, nctype, shape=()):
             self.name = name
@@ -83,9 +85,8 @@ class NCstructure(object):
             self.attributes = OrderedDict()
 
         def createAttribute(self, name, value):
-            att = NCstructure.Attribute(name, value)
-            self.attributes[name] = att
-            return att
+            """Set a NetCDF variable attribute"""
+            self.attributes[name] = NCstructure.Attribute(name, value)
 
     # NCstructure.__init__
     def __init__(self, location=None):
@@ -95,22 +96,21 @@ class NCstructure(object):
         self.attributes = OrderedDict()
 
     def createDimension(self, name, length=None, isUnlimited=False):
+        """Define a dimension in the structure"""
         if length is None:
             unlim = True
             len_ = 0
         else:
             unlim = isUnlimited
             len_ = length
-        dim = self.Dimension(name, len_, unlim)
-        self.dimensions[name] = dim
-        return dim
+        self.dimensions[name] = self.Dimension(name, len_, unlim)
 
     def createAttribute(self, name, value):
-        att = self.Attribute(name, value)
-        self.attributes[name] = att
-        return att
+        """Set a netCDF global attribute"""
+        self.attributes[name] = NCstructure.Attribute(name, value)
 
     def createVariable(self, name, nctype, shape):
+        """Define a netCDF variable in the structure"""
         # Sanity check
         for d in shape:
             assert d in self.dimensions.keys()
@@ -144,7 +144,7 @@ class NCstructure(object):
 
     @classmethod
     def from_CDL(cls, filename):
-        """Define the data structure from a CDL file"""
+        """Extract the structure from a CDL file"""
 
         fid = codecs.open(filename, encoding='utf-8')
 
@@ -215,6 +215,7 @@ class NCstructure(object):
 
     @classmethod
     def from_NcML(cls, filename):
+        """Extract the structure from a NcML file"""
 
         # Parse the NcML file
         with open(filename) as fid:
@@ -248,7 +249,7 @@ class NCstructure(object):
                     value = node.attrib['value']
                     nctype = node.attrib.get('type', 'String')
                     if nctype != 'String':
-                        value = np.array([dtype[nctype](v)
+                        value = np.array([Dtype[nctype](v)
                                           for v in value.split()])
                     nc.createAttribute(name, value)
 
@@ -265,13 +266,13 @@ class NCstructure(object):
                             value = child.attrib['value']
                             nctype = child.attrib.get('type', 'String')
                             if nctype != 'String':
-                                value = np.array([dtype[nctype](v)
+                                value = np.array([Dtype[nctype](v)
                                                   for v in value.split()])
                             var.createAttribute(name, value)
 
         return nc
 
-    def write_CDL(self, fid):
+    def write_CDL(self, fid=sys.stdout):
         """Write Common Data Language
 
         Produce identical output as ncdump -h
@@ -291,8 +292,8 @@ class NCstructure(object):
 
         if self.variables:
             fid.write('variables:\n')
-        for name, var in self.variables.items():
-            fid.write('\t{} {}'.format(var.nctype, name))
+        for varname, var in self.variables.items():
+            fid.write('\t{} {}'.format(var.nctype, varname))
             if var.shape:
                 fid.write('(')
                 for d in var.shape[:-1]:
@@ -304,10 +305,10 @@ class NCstructure(object):
             for attname, att in var.attributes.items():
                 if isinstance(att.value, string_type):
                     fid.write('\t\t{}:{} = "{}" ;\n'.
-                              format(name, attname, att.value))
+                              format(varname, attname, att.value))
                 else:
                     fid.write('\t\t{}:{} = {} ;\n'.
-                              format(name, attname, vector2cdl(att.value)))
+                              format(varname, attname, vector2cdl(att.value)))
 
         if self.attributes:
             fid.write('\n// global attributes:\n')
@@ -321,7 +322,9 @@ class NCstructure(object):
 
         fid.write('}\n')
 
-    def write_NcML(self, fid):
+    def write_NcML(self, fid=sys.stdout):
+        """Write the structure to a NcML file"""
+
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<netcdf xmlns="http://www.unidata.ucar.edu/')
         fid.write('namespaces/netcdf/ncml-2.2"')
@@ -347,13 +350,13 @@ class NCstructure(object):
                       format(attname, att.value))
 
         # Variables
-        for name, var in self.variables.items():
+        for varname, var in self.variables.items():
             if var.shape:
                 fid.write('  <variable name="{}" shape="{}" type="{}">\n'.
-                          format(name, ' '.join(var.shape), var.nctype))
+                          format(varname, ' '.join(var.shape), var.nctype))
             else:
                 fid.write('  <variable name="{}" type="{}">\n'.
-                          format(name, var.nctype))
+                          format(varname, var.nctype))
 
             # Variable attributes
             for attname, att in var.attributes.items():
@@ -384,9 +387,9 @@ def isplit_noloss(predicate, iterator):
         if predicate(x):
             accumulator.append(x)
         else:
-            yield (accumulator)
+            yield accumulator
             accumulator = [x]
-    yield (accumulator)  # Final part of the iterator
+    yield accumulator  # Final part of the iterator
 
 
 def parse_attribute(line):
@@ -428,6 +431,7 @@ def vector2cdl(vector):
     dtype = vector.dtype
 
     def normalize(x):
+        """Normalize a single value for CDL"""
         if dtype == 'int16':
             s = '{}s'.format(x)
         elif dtype == 'int32':
@@ -453,6 +457,8 @@ def vector2ncml(vector):
     dtype = vector.dtype
 
     def normalize(x):
+        """Normalize a single value for NcML"""
+
         if dtype in ['int16', 'int32']:
             s = '{}'.format(x)
         elif dtype in ['float32', 'float64']:
