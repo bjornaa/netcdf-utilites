@@ -7,6 +7,8 @@ Class for structure of a classic netCDF file
 
 """
 
+# --- Imports ---
+
 from __future__ import unicode_literals, print_function
 
 import sys
@@ -20,6 +22,8 @@ from xml.etree import ElementTree
 import numpy as np
 from netCDF4 import Dataset
 
+# --- Python2/3 ---
+
 PY2 = sys.version_info[0] == 2
 # PY3 = sys.version_info[0] == 3
 
@@ -32,6 +36,9 @@ string_type = str  # python 3
 if PY2:
     string_type = basestring
 
+
+# --- Conversion dictionaries ---
+
 # Conversion from numpy dtype.char to NetCDF type
 # May change to l -> long (not supported in NetCDF 3)
 NCtype = dict(h='short', i='int', l='int', f='float', d='double', S='String')
@@ -39,8 +46,7 @@ NCtype = dict(h='short', i='int', l='int', f='float', d='double', S='String')
 # Conversion from nctype to numpy dtype
 Dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 
-# if PY2:
-#    NCtype[unicode] = 'char'
+# --- Main class ---
 
 
 class NCstructure(object):
@@ -146,71 +152,74 @@ class NCstructure(object):
     def from_CDL(cls, filename):
         """Extract the structure from a CDL file"""
 
-        fid = codecs.open(filename, encoding='utf-8')
+        with codecs.open(filename, encoding='utf-8') as fid:
 
-        nc = NCstructure()
+            nc = NCstructure()
 
-        # Skip empty lines
-        lines = (line for line in fid if line.split())
+            # Skip empty lines
+            lines = (line for line in fid if line.split())
 
-        # Location line
-        words = next(lines).split()
-        nc.location = words[1]
+            # Location line
+            words = next(lines).split()
+            nc.location = words[1]
 
-        # Dimensions
-        next(lines)  # Skip "dimensions:"
-        dimlines = it.takewhile(lambda x: x.split()[0] != 'variables:', lines)
-        for line in dimlines:
-            words = line.split()
-            isunlimited = (words[2].upper() == 'UNLIMITED')
-            if isunlimited:
-                # Get size from comment
-                size = int(words[5][1:])  # Skip "(" in
-            else:
-                size = int(words[2])
-            nc.createDimension(words[0], size, isunlimited)
+            # Dimensions
+            next(lines)  # Skip "dimensions:"
+            dimlines = it.takewhile(lambda x: x.split()[0] != 'variables:',
+                                    lines)
+            for line in dimlines:
+                words = line.split()
+                isunlimited = (words[2].upper() == 'UNLIMITED')
+                if isunlimited:
+                    # Get size from comment
+                    size = int(words[5][1:])  # Skip "(" in
+                else:
+                    size = int(words[2])
+                nc.createDimension(words[0], size, isunlimited)
 
-        # Variables
-        def isvarline(line):
-            w = line.split()
-            # Global attributes comes after comment line
-            # not ending with ";"
-            return w[-1][-1] == ';'
+            # Variables
+            def isvarline(line):
+                """Check if a line is a variable chunk"""
+                # Recognize this lines as continuos chunk
+                # of lines ending with ";"
+                w = line.split()
+                # Global attributes comes after comment line
+                # not ending with ";"
+                return w[-1][-1] == ';'
 
-        variable_lines = it.takewhile(isvarline, lines)
-        # Split the variables
-        variable_chunks = isplit_noloss(lambda x: ':' in x.split()[0],
-                                        variable_lines)
+            variable_lines = it.takewhile(isvarline, lines)
+            # Split the variables
+            variable_chunks = isplit_noloss(lambda x: ':' in x.split()[0],
+                                            variable_lines)
 
-        for chunk in variable_chunks:
-            words = chunk[0].split()  # main variable line
-            words = [w.rstrip(',') for w in words]  # strip trailing commas
-            nctype = words[0]
-            if '(' in words[1]:  # has dimensions
-                ndim = len(words) - 2
-                name, dim0 = words[1].split('(')
-                dims = [dim0]
-                for i in range(1, ndim):
-                    dims.append(words[i + 1])
-                dims[-1] = dims[-1][:-1]  # remove trailing ')'
-            else:
-                name = words[1]
-                dims = []
+            for chunk in variable_chunks:
+                words = chunk[0].split()  # main variable line
+                words = [w.rstrip(',') for w in words]  # strip trailing commas
+                nctype = words[0]
+                if '(' in words[1]:  # has dimensions
+                    ndim = len(words) - 2
+                    name, dim0 = words[1].split('(')
+                    dims = [dim0]
+                    for i in range(1, ndim):
+                        dims.append(words[i + 1])
+                    dims[-1] = dims[-1][:-1]  # remove trailing ')'
+                else:
+                    name = words[1]
+                    dims = []
 
-            var = nc.createVariable(name, nctype, tuple(dims))
-            # Attribute lines
-            for line in chunk[1:]:
+                var = nc.createVariable(name, nctype, tuple(dims))
+                # Attribute lines
+                for line in chunk[1:]:
+                    name, value = parse_attribute(line)
+                    var.createAttribute(name, value)
+
+            # Global attributes
+            globatt_lines = it.takewhile(lambda x: x.lstrip().startswith(':'),
+                                         lines)
+            for line in globatt_lines:
                 name, value = parse_attribute(line)
-                var.createAttribute(name, value)
+                nc.createAttribute(name, value)
 
-        # Global attributes
-        globatt_lines = it.takewhile(lambda x: x.lstrip().startswith(':'),
-                                     lines)
-        for line in globatt_lines:
-            name, value = parse_attribute(line)
-            nc.createAttribute(name, value)
-
-        fid.close()
         return nc
 
     @classmethod
@@ -373,6 +382,8 @@ class NCstructure(object):
             fid.write('  </variable>\n')
 
         fid.write('</netcdf>\n')
+
+# --- utility functions ---
 
 
 def isplit_noloss(predicate, iterator):
