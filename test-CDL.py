@@ -29,8 +29,8 @@ class TestCDL(unittest.TestCase):
 
     def tearDown(self):
         os.remove('test.nc')
-        os.remove('test0.cdl')
-        os.remove('mytest.cdl')
+        #os.remove('test0.cdl')
+        #os.remove('mytest.cdl')
 
 
 if __name__ == '__main__':

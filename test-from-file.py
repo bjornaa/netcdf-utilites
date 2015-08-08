@@ -34,6 +34,5 @@ class TestFromFile(unittest.TestCase):
         os.remove('test0.cdl')
         os.remove('mytest.cdl')
 
-
 if __name__ == '__main__':
     unittest.main()

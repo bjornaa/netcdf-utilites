@@ -3,7 +3,8 @@
 """Exercise 1 from Unidata's NcML tutorial
 
 http://www.unidata.ucar.edu/
-software/thredds/current/netcdf-java/ncml/Tutorial.html
+# software/thredds/current/netcdf-java/ncml/Tutorial.html
+
 """
 
 import sys
