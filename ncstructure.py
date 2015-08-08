@@ -22,6 +22,8 @@ from xml.etree import ElementTree
 import numpy as np
 from netCDF4 import Dataset
 
+from parse_CDL import parse_CDL
+
 # --- Python2/3 ---
 
 PY2 = sys.version_info[0] == 2
@@ -50,7 +52,7 @@ Dtype = dict(short=np.int16, int=np.int32, float=np.float32, double=np.float64)
 
 
 class NCstructure(object):
-    """NetCDF variable"""
+    """NetCDF structure"""
 
     class Dimension(object):
         """NetCDF dimension"""
@@ -152,73 +154,20 @@ class NCstructure(object):
     def from_CDL(cls, filename):
         """Extract the structure from a CDL file"""
 
-        with codecs.open(filename, encoding='utf-8') as fid:
+        location, dimensions, variables, attributes = parse_CDL(filename)
 
-            nc = NCstructure()
+        nc = NCstructure(location)
 
-            # Skip empty lines
-            lines = (line for line in fid if line.split())
+        for dim in dimensions:
+            nc.createDimension(*dim)
 
-            # Location line
-            words = next(lines).split()
-            nc.location = words[1]
+        for var in variables:
+            v = nc.createVariable(var[1], var[0], var[2])
+            for att in attributes[var[1]]:
+                v.createAttribute(att[1], att[2])
 
-            # Dimensions
-            next(lines)  # Skip "dimensions:"
-            dimlines = it.takewhile(lambda x: x.split()[0] != 'variables:',
-                                    lines)
-            for line in dimlines:
-                words = line.split()
-                isunlimited = (words[2].upper() == 'UNLIMITED')
-                if isunlimited:
-                    # Get size from comment
-                    size = int(words[5][1:])  # Skip "(" in
-                else:
-                    size = int(words[2])
-                nc.createDimension(words[0], size, isunlimited)
-
-            # Variables
-            def isvarline(line):
-                """Check if a line is a variable chunk"""
-                # Recognize this lines as continuos chunk
-                # of lines ending with ";"
-                w = line.split()
-                # Global attributes comes after comment line
-                # not ending with ";"
-                return w[-1][-1] == ';'
-
-            variable_lines = it.takewhile(isvarline, lines)
-            # Split the variables
-            variable_chunks = isplit_noloss(lambda x: ':' in x.split()[0],
-                                            variable_lines)
-
-            for chunk in variable_chunks:
-                words = chunk[0].split()  # main variable line
-                words = [w.rstrip(',') for w in words]  # strip trailing commas
-                nctype = words[0]
-                if '(' in words[1]:  # has dimensions
-                    ndim = len(words) - 2
-                    name, dim0 = words[1].split('(')
-                    dims = [dim0]
-                    for i in range(1, ndim):
-                        dims.append(words[i + 1])
-                    dims[-1] = dims[-1][:-1]  # remove trailing ')'
-                else:
-                    name = words[1]
-                    dims = []
-
-                var = nc.createVariable(name, nctype, tuple(dims))
-                # Attribute lines
-                for line in chunk[1:]:
-                    name, value = parse_attribute(line)
-                    var.createAttribute(name, value)
-
-            # Global attributes
-            globatt_lines = it.takewhile(lambda x: x.lstrip().startswith(':'),
-                                         lines)
-            for line in globatt_lines:
-                name, value = parse_attribute(line)
-                nc.createAttribute(name, value)
+        for att in attributes[None]:
+            nc.createAttribute(att[1], att[2])
 
         return nc
 
@@ -401,40 +350,6 @@ def isplit_noloss(predicate, iterator):
             yield accumulator
             accumulator = [x]
     yield accumulator  # Final part of the iterator
-
-
-def parse_attribute(line):
-    """Parse an attribute line from CDL, infer type"""
-    words = line.split()
-    words = [w.rstrip(',') for w in words]  # Strip trailing commas
-    name = words[0].split(':')[1]
-    values = words[2:-1]  # Between = and ;
-    v0 = values[0]
-    # text
-    if v0.startswith('"'):
-        value = line[line.index('"') + 1: line.rindex('"')]  # Between ""
-    # short
-    elif v0.endswith('s'):
-        # nctype = 'short'
-        value = np.array([int(v.rstrip('s')) for v in values],
-                         dtype='int16')
-    # float
-    elif v0.endswith('f'):
-        # nctype = 'float'
-        value = np.array([float(v.rstrip('f')) for v in values],
-                         dtype='float32')
-    # double
-    elif "." in v0:
-        # nctype = 'double'
-        value = np.array([float(v) for v in values],
-                         dtype='float64')
-    # integer
-    else:  # integer
-        # nctype = 'int'
-        value = np.array([int(v) for v in values],
-                         dtype='int32')
-    # Make exception for bad entry
-    return name, value
 
 
 def vector2cdl(vector):
