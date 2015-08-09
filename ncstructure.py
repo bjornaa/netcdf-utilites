@@ -162,8 +162,8 @@ class NCstructure(object):
             nc.createDimension(*dim)
 
         for var in variables:
-            v = nc.createVariable(var[1], var[0], var[2])
-            for att in attributes[var[1]]:
+            v = nc.createVariable(*var)
+            for att in attributes[var[0]]:
                 v.createAttribute(att[1], att[2])
 
         for att in attributes[None]:

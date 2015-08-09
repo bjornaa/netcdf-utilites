@@ -74,7 +74,7 @@ def parse_variable(line):
     nctype = words[0]
     name = words[1]
     shape = tuple(words[2:])
-    return nctype, name, shape
+    return name, nctype, shape
 
 
 def parse_attribute(line):
@@ -163,7 +163,7 @@ def parse_CDL(cdl_file):
             # Parse the lines
             dimensions = [parse_dimension(line) for line in dim_lines]
             variables = [parse_variable(line) for line in var_lines]
-            attributes = {var[1]: [] for var in variables}
+            attributes = {var[0]: [] for var in variables}
             attributes[None] = []   # Global attributes
             for line in att_lines:
                 att = parse_attribute(line)
