@@ -110,8 +110,11 @@ class NCstructure(object):
             len_ = 0
         else:
             unlim = isUnlimited
+
             len_ = length
-        self.dimensions[name] = self.Dimension(name, len_, unlim)
+        dim = self.Dimension(name, len_, unlim)
+        self.dimensions[name] = dim
+        return dim
 
     def createAttribute(self, name, value):
         """Set a netCDF global attribute"""
@@ -125,6 +128,18 @@ class NCstructure(object):
         var = self.Variable(name, nctype, shape)
         self.variables[name] = var
         return var
+
+    def renameDimension(self, oldname, newname):
+        dim = self.dimensions[oldname]
+        dim._name = newname
+        # rename the key of the OrderedDict in place
+        replace_ordered_key(self.dimensions, oldname, newname)
+        # rename the variable shapes
+        for varname, var in self.variables.items():
+            if oldname in var.shape:
+                L = list(var.shape)
+                L[L.index(oldname)] = newname
+                var.shape = tuple(L)
 
     @classmethod
     def from_file(cls, filename):
@@ -397,3 +412,12 @@ def vector2ncml(vector):
         return s  # end normalize
 
     return ' '.join(normalize(a) for a in vector)
+
+
+def replace_ordered_key(D, oldkey, newkey):
+    """Replace a key in an OrderedDict"""
+    for i in range(len(D)):
+        key, value = D.popitem(False)
+        if key == oldkey:
+            key = newkey
+        D[key] = value
