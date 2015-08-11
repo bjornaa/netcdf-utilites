@@ -5,7 +5,7 @@ import unittest
 from ncstructure import NCstructure
 
 
-class TestDimension(unittest.TestCase):
+class TestRenameDimension(unittest.TestCase):
 
     def test_no_rename(self):
         struc = NCstructure('test')
@@ -39,6 +39,54 @@ class TestDimension(unittest.TestCase):
         with self.assertRaises(KeyError):
             struc.renameDimension('longitude', 'latitude')
 
+
+class TestRenameVariable(unittest.TestCase):
+
+    def test_no_rename(self):
+        struc = NCstructure('test')
+        struc.createDimension('lon', 360)
+        var = struc.createVariable('lon', 'float', ('lon',))
+        with self.assertRaises(AttributeError):
+            var.name = 'longitude'
+        self.assertEqual(var.name, struc.variables['lon'].name)
+
+    def test_rename(self):
+        struc = NCstructure('test')
+        struc.createDimension('lon', 360)
+        struc.createVariable('a', 'float', ('lon',))
+        struc.createVariable('b', 'float', ('lon',))
+        struc.createVariable('c', 'float', ('lon',))
+        id0 = id(struc.variables['b'])
+        struc.renameVariable('b', 'bb')
+
+        # Same variable
+        self.assertEqual(id(struc.variables['bb']), id0)
+        # Correct name
+        self.assertEqual(struc.variables['bb'].name, 'bb')
+        # Correct place in OrderedDict
+        self.assertEqual(struc.variables.keys(), ['a', 'bb', 'c'])
+
+    def test_wrong_variable(self):
+        struc = NCstructure('test')
+        struc.createDimension('lon', 360)
+        struc.createVariable('lon', 'float', ('lon',))
+        with self.assertRaises(KeyError):
+            struc.renameVariable('longitude', 'latitude')
+
+
+class TestRenameAttribute(unittest.TestCase):
+
+    def test_rename(self):
+        struc = NCstructure('test')
+        struc.createDimension('lon', 360)
+        var = struc.createVariable('lon', 'float', ('lon',))
+        struc.createAttribute('type', 'Global test attribute')
+        var.createAttribute('long_name', 'longitude')
+
+        struc.renameAttribute('type', 'newtype')
+        self.assertEqual(struc.attributes['newtype'].name, 'newtype')
+        var.renameAttribute('long_name', 'standard_name')
+        self.assertEqual(var.attributes['standard_name'].name, 'standard_name')
 
 if __name__ == '__main__':
     unittest.main()

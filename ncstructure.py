@@ -75,7 +75,7 @@ class NCstructure(object):
         """NetCDF attribute"""
 
         def __init__(self, name, value):
-            self.name = name
+            self._name = name
             if isinstance(value, string_type):
                 self.nctype = 'String'
                 self.value = value
@@ -83,18 +83,27 @@ class NCstructure(object):
                 self.value = np.atleast_1d(value)
                 self.nctype = NCtype[np.asarray(value).dtype.char]
 
+        name = property(attrgetter('_name'))
+
     class Variable(object):
         """NetCDF variable"""
 
         def __init__(self, name, nctype, shape=()):
-            self.name = name
+            self._name = name
             self.nctype = nctype
             self.shape = tuple(shape)
             self.attributes = OrderedDict()
 
+        name = property(attrgetter('_name'))
+
         def createAttribute(self, name, value):
             """Set a NetCDF variable attribute"""
             self.attributes[name] = NCstructure.Attribute(name, value)
+
+        def renameAttribute(self, oldname, newname):
+            att = self.attributes[oldname]
+            att._name = newname
+            replace_ordered_key(self.attributes, oldname, newname)
 
     # NCstructure.__init__
     def __init__(self, location=None):
@@ -140,6 +149,16 @@ class NCstructure(object):
                 L = list(var.shape)
                 L[L.index(oldname)] = newname
                 var.shape = tuple(L)
+
+    def renameVariable(self, oldname, newname):
+        var = self.variables[oldname]
+        var._name = newname
+        replace_ordered_key(self.variables, oldname, newname)
+
+    def renameAttribute(self, oldname, newname):
+        att = self.attributes[oldname]
+        att._name = newname
+        replace_ordered_key(self.attributes, oldname, newname)
 
     @classmethod
     def from_file(cls, filename):
@@ -415,7 +434,9 @@ def vector2ncml(vector):
 
 
 def replace_ordered_key(D, oldkey, newkey):
-    """Replace a key in an OrderedDict"""
+    """Replace a key in-place in an OrderedDict"""
+    # Rotate the items, replacing the actual key
+    # From fbstj at stackoverflow
     for i in range(len(D)):
         key, value = D.popitem(False)
         if key == oldkey:
