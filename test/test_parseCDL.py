@@ -3,8 +3,9 @@
 import unittest
 
 import numpy as np
-from parse_CDL import parse_dimension, parse_variable, parse_attribute
-from parse_CDL import join_lines, split_lines
+from netcdf_utilities.parse_CDL import parse_dimension, parse_variable
+from netcdf_utilities.parse_CDL import parse_attribute
+from netcdf_utilities.parse_CDL import join_lines, split_lines
 
 
 class TestParseDimension(unittest.TestCase):

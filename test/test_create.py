@@ -2,7 +2,7 @@
 
 import unittest
 
-from ncstructure import NCstructure
+from netcdf_utilities.ncstructure import NCstructure
 
 
 class TestCreate(unittest.TestCase):

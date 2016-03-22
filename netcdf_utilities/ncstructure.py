@@ -22,7 +22,7 @@ from xml.etree import ElementTree
 import numpy as np
 from netCDF4 import Dataset
 
-from parse_CDL import parse_CDL
+from netcdf_utilities.parse_CDL import parse_CDL
 
 # --- Python2/3 ---
 

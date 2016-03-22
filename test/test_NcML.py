@@ -6,7 +6,7 @@ import subprocess
 import filecmp
 import codecs
 
-from ncstructure import NCstructure
+from netcdf_utilities.ncstructure import NCstructure
 
 
 class TestNcML(unittest.TestCase):

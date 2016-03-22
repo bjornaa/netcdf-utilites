@@ -2,7 +2,7 @@
 
 import unittest
 
-from ncstructure import *
+from netcdf_utilities.ncstructure import *
 
 try:
     from StringIO import StringIO

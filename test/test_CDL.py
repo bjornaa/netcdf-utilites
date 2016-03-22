@@ -6,8 +6,7 @@ import subprocess
 import filecmp
 import codecs
 
-from ncstructure import NCstructure
-
+from netcdf_utilities.ncstructure import NCstructure
 
 class TestCDL(unittest.TestCase):
 
@@ -15,7 +14,7 @@ class TestCDL(unittest.TestCase):
         """Standardize the CDL file"""
         # Use ncgen to make test.nc
         subprocess.call(['ncgen', '-b', 'test.cdl'])
-        # Use ncdump to generate a well-behaved CFL-file
+        # Use ncdump to generate a well-behaved CDL-file
         with open('test0.cdl', 'w') as fid:
             subprocess.call(['ncdump', '-h', 'test.nc'], stdout=fid)
 
@@ -29,8 +28,8 @@ class TestCDL(unittest.TestCase):
 
     def tearDown(self):
         os.remove('test.nc')
-        #os.remove('test0.cdl')
-        #os.remove('mytest.cdl')
+        # os.remove('test0.cdl')
+        # os.remove('mytest.cdl')
 
 
 if __name__ == '__main__':

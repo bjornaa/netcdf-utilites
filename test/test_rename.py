@@ -1,8 +1,8 @@
-# coding=utf-8
+# -*- coding=utf-8 -*-
 
 import unittest
 
-from ncstructure import NCstructure
+from netcdf_utilities.ncstructure import NCstructure
 
 
 class TestRenameDimension(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestRenameDimension(unittest.TestCase):
         # Correct name
         self.assertEqual(struc.dimensions['bb'].name, 'bb')
         # Correct place in OrderedDict
-        self.assertEqual(struc.dimensions.keys(), ['a', 'bb', 'c'])
+        self.assertEqual(list(struc.dimensions.keys()), ['a', 'bb', 'c'])
         # Variable shape is updated correctly
         self.assertEqual(var.shape, ('a', 'bb'))
 
@@ -64,7 +64,7 @@ class TestRenameVariable(unittest.TestCase):
         # Correct name
         self.assertEqual(struc.variables['bb'].name, 'bb')
         # Correct place in OrderedDict
-        self.assertEqual(struc.variables.keys(), ['a', 'bb', 'c'])
+        self.assertEqual(list(struc.variables.keys()), ['a', 'bb', 'c'])
 
     def test_wrong_variable(self):
         struc = NCstructure('test')
