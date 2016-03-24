@@ -10,7 +10,7 @@
 
 from __future__ import unicode_literals
 
-from ncstructure import NCstructure
+from .ncstructure import NCstructure
 
 # Translate netCDF types to netcdf4-python types
 type_abbrev = dict(short='i2', int='i', float='f', double='d', char='c')
@@ -56,18 +56,19 @@ def ncgen(ncstruc, f):
         attributes = var.attributes
         # _FillValue attribute must be handled separately
         if '_FillValue' in attributes:
-            f.write("    v = ncid.createVariable('{}', '{}', {}".
-                    format(name, type_abbrev[var.nctype], str(var.dimensions)))
-            f.write(", fill_value={})\n".
-                    format(attributes['_FillValue'].value[0]))
+            f.write("    v = ncid.createVariable('{}', '{}', {}".format(
+                name, type_abbrev[var.nctype], var.shape))
+            f.write(", fill_value={})\n".format(
+                attributes['_FillValue'].value[0]))
             attributes.pop('_FillValue')
         else:
-            f.write("    v = ncid.createVariable('{}', '{}', {}\n".
-                    format(name, type_abbrev[var.nctype], str(var.dimensions)))
+            f.write("    v = ncid.createVariable('{}', '{}', {}\n".format(
+                name, type_abbrev[var.nctype], var.shape))
         # Variable attributes
         for attname in attributes:
             value = var.attributes[attname].value
-            if isinstance(value, basestring):
+            # if isinstance(value, basestring):
+            if isinstance(value, str):
                 value = "'{}'".format(value)
             else:
                 value = 'np.' + repr(value).replace('dtype=', 'dtype=np.')
@@ -79,7 +80,8 @@ def ncgen(ncstruc, f):
         f.write("\n    # --- Global attributes\n")
     for name in ncstruc.attributes:
         value = ncstruc.attributes[name].value
-        if isinstance(value, basestring):
+        # if isinstance(value, basestring):
+        if isinstance(value, str):
             value = "'{}'".format(value)
         else:
             value = 'np.' + repr(value).replace('dtype=', 'dtype=np.')
